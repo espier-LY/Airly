@@ -208,12 +208,48 @@ const keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
+// ==================== 触屏控制 ====================
+let touchActive = false;
+
+canvas.addEventListener("touchstart", e => {
+    e.preventDefault();
+    touchActive = true;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    player.x = (touch.clientX - rect.left) * scaleX - player.width / 2;
+    player.y = (touch.clientY - rect.top) * scaleY - player.height / 2;
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+    e.preventDefault();
+    if (!touchActive) return;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    player.x = (touch.clientX - rect.left) * scaleX - player.width / 2;
+    player.y = (touch.clientY - rect.top) * scaleY - player.height / 2;
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+    e.preventDefault();
+    touchActive = false;
+}, { passive: false });
+
 // ==================== 玩家移动 ====================
 function updatePlayer() {
     if (keys["ArrowLeft"] && player.left() > 0) player.x -= player.speed;
     if (keys["ArrowRight"] && player.right() < WIDTH) player.x += player.speed;
     if (keys["ArrowUp"] && player.top() > 0) player.y -= player.speed;
     if (keys["ArrowDown"] && player.bottom() < HEIGHT) player.y += player.speed;
+
+    // 边界限制（键盘和触屏共用）
+    if (player.x < 0) player.x = 0;
+    if (player.x > WIDTH - player.width) player.x = WIDTH - player.width;
+    if (player.y < 0) player.y = 0;
+    if (player.y > HEIGHT - player.height) player.y = HEIGHT - player.height;
 }
 
 // ==================== 陨石生成 ====================
