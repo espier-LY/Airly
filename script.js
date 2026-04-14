@@ -376,7 +376,7 @@ function lasers() {
                 powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "arrow"));
                 score += 20;
             } else if (o.type === "red") {
-                if (Math.random() < 1 / 6) {
+                if (Math.random() < 1 / 3) {
                     powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "shield"));
                 }
                 score += 50;
