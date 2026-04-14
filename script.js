@@ -521,7 +521,7 @@ function gameLoop(currentTime) {
     // 分数显示
     ctx.fillStyle = "rgb(255,255,255)";
     ctx.font = "36px Arial";
-    ctx.fillText(`Score: ${score}`, 10, 40);
+    ctx.fillText(`分数: ${score}`, 10, 40);
 
     document.getElementById("scoreValue").textContent = score;
 
@@ -549,4 +549,14 @@ document.getElementById("restartBtn").addEventListener("click", () => {
 });
 
 // ==================== 启动 ====================
-requestAnimationFrame(gameLoop);
+// 初始不自动启动，等待开始按钮
+let gameStarted = false;
+
+// ==================== 开始按钮 ====================
+document.getElementById("startBtn").addEventListener("click", () => {
+    document.getElementById("startScreen").classList.add("hidden");
+    if (!gameStarted) {
+        gameStarted = true;
+        requestAnimationFrame(gameLoop);
+    }
+});
