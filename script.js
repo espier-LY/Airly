@@ -514,7 +514,7 @@ function gameLoop(currentTime) {
     // 绘制玩家飞机（使用贴图）
     ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
     if (shield_hits > 0) {
-    ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
+    ctx.strokeStyle = "rgba(30, 157, 176, 0.68)";
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.arc(
