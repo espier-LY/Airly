@@ -25,10 +25,17 @@ arrowImg.src = "assets/Arrow.jpg";
 const shieldImg = new Image();
 shieldImg.src = "assets/Shield.jpg";
 
+const bossImg = new Image();
+bossImg.src = "assets/1.1.png";
+
+const boss2Img = new Image();
+boss2Img.src = "assets/1.2.png";
+
 // ==================== 游戏状态 ====================
 let obstacles = [];
 let powerups = [];
 let particles = [];
+let bossBullets = [];
 
 let score = 0;
 let last_gold_trigger_time = -1;
@@ -133,8 +140,8 @@ function createObstacle(type = "normal") {
         let rect = {
             x: Math.random() * (WIDTH - 65),
             y: Math.random() * -300,
-            width: 65,
-            height: 65
+            width: (type === "boss" || type === "boss2") ? 98 : 65,
+            height: (type === "boss" || type === "boss2") ? 98 : 65
         };
 
         // ===== 扩展碰撞区域（防止贴太近）=====
@@ -166,8 +173,10 @@ function createObstacle(type = "normal") {
             let hp = 60;
             if (type === "gold") hp = 180;
             if (type === "red") hp = 360;
+            if (type === "boss") hp = 180;
+            if (type === "boss2") hp = 180;
 
-            return { rect, hp, type };
+            return { rect, hp, type, lastAttackTime: 0 };
         }
     }
 
@@ -175,15 +184,15 @@ function createObstacle(type = "normal") {
     let rect = {
         x: Math.random() * (WIDTH - 65),
         y: -65,
-        width: 65,
-        height: 65
+        width: type === "boss" ? 98 : 65,
+        height: type === "boss" ? 98 : 65
     };
 
     let hp = 60;
     if (type === "gold") hp = 180;
     if (type === "red") hp = 360;
 
-    return { rect, hp, type };
+    return { rect, hp, type, lastAttackTime: 0 };
 }
 
 // ==================== 碰撞 ====================
@@ -263,9 +272,19 @@ function updatePlayer() {
 
 // ==================== 陨石生成 ====================
 function spawn() {
-    if (Math.random() < 1 / 30) {
+    if (Math.random() < 1 / 50) {
         if (Math.random() < 1 / 5) obstacles.push(createObstacle("red"));
         else obstacles.push(createObstacle("normal"));
+    }
+
+    // Boss生成：概率为普通陨石的1/6
+    if (Math.random() < 1 / 300) {
+        obstacles.push(createObstacle("boss"));
+    }
+
+    // Boss2生成：概率为普通陨石的1/8
+    if (Math.random() < 1 / 400) {
+        obstacles.push(createObstacle("boss2"));
     }
 
     const sec = Math.floor(Date.now() / 1000);
@@ -415,6 +434,8 @@ function drawObstacles() {
         let img;
         if (o.type === "gold") img = goldImg;
         else if (o.type === "red") img = redImg;
+        else if (o.type === "boss") img = bossImg;
+        else if (o.type === "boss2") img = boss2Img;
         else img = meteoriteImg;
 
         ctx.drawImage(img, o.rect.x, o.rect.y, o.rect.width, o.rect.height);
@@ -423,6 +444,7 @@ function drawObstacles() {
         let hp_max = 60;
         if (o.type === "gold") hp_max = 180;
         if (o.type === "red") hp_max = 360;
+        if (o.type === "boss") hp_max = 180;
 
         let hp_ratio = Math.min(Math.max(o.hp / hp_max, 0), 1);
 
@@ -435,6 +457,28 @@ function drawObstacles() {
 }
 
 // ==================== 游戏结束检查 ====================
+// Boss子弹碰撞检测
+function checkBossBulletCollision() {
+    for (let i = bossBullets.length - 1; i >= 0; i--) {
+        let b = bossBullets[i];
+        let dx = b.x - player.centerx();
+        let dy = b.y - player.centery();
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < b.radius + player.width / 10) {
+            if (shield_hits > 0) {
+                shield_hits--;
+                bossBullets.splice(i, 1);
+            } else {
+                console.log("游戏结束");
+                running = false;
+                document.getElementById("gameOver").classList.remove("hidden");
+                document.getElementById("finalScore").textContent = score;
+                return;
+            }
+        }
+    }
+}
+
 function checkGameOver() {
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let o = obstacles[i];
@@ -490,7 +534,54 @@ function gameLoop(currentTime) {
         o.rect.y += 4 * dt;
     }
 
+    // Boss发射子弹
+    const now = Date.now();
+    for (let o of obstacles) {
+        if (o.type === "boss" && o.rect.y > 0) {
+            if (now - o.lastAttackTime >= 1000) {
+                bossBullets.push({
+                    x: o.rect.x + o.rect.width / 2,
+                    y: o.rect.y + o.rect.height,
+                    radius: player.width / 12,
+                    speed: 6
+                });
+                o.lastAttackTime = now;
+            }
+        }
+        if (o.type === "boss2" && o.rect.y > 0) {
+            if (now - o.lastAttackTime >= 2000) {
+                let bx = o.rect.x + o.rect.width / 2;
+                let by = o.rect.y + o.rect.height;
+                let dx = player.centerx() - bx;
+                let dy = player.centery() - by;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    let vx = (dx / dist) * 6;
+                    let vy = (dy / dist) * 6;
+                    // 垂直于速度方向的单位向量（用于间隔30像素）
+                    let px = -vy / 6 * 15;
+                    let py = vx / 6 * 15;
+                    bossBullets.push({ x: bx + px, y: by + py, radius: player.width / 12, vx: vx, vy: vy });
+                    bossBullets.push({ x: bx - px, y: by - py, radius: player.width / 12, vx: vx, vy: vy });
+                }
+                o.lastAttackTime = now;
+            }
+        }
+    }
+
+    // 更新Boss子弹
+    for (let b of bossBullets) {
+        if (b.vx !== undefined && b.vy !== undefined) {
+            b.x += b.vx;
+            b.y += b.vy;
+        } else {
+            b.y += b.speed;
+        }
+    }
+    bossBullets = bossBullets.filter(b => b.y < HEIGHT && b.y > -50 && b.x > -50 && b.x < WIDTH + 50);
+
     checkGameOver();
+    checkBossBulletCollision();
 
     // 移除出界陨石
     obstacles = obstacles.filter(o => o.rect.y < HEIGHT);
@@ -513,6 +604,14 @@ function gameLoop(currentTime) {
 
     // 绘制玩家飞机（使用贴图）
     ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+
+    // 绘制Boss子弹
+    for (let b of bossBullets) {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+        ctx.fill();
+    }
     if (shield_hits > 0) {
     ctx.strokeStyle = "rgba(30, 157, 176, 0.68)";
     ctx.lineWidth = 5;
@@ -542,6 +641,7 @@ document.getElementById("restartBtn").addEventListener("click", () => {
     obstacles = [];
     powerups = [];
     particles = [];
+    bossBullets = [];
     score = 0;
     last_gold_trigger_time = -1;
     laser_count = 3;
