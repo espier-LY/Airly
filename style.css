@@ -57,6 +57,62 @@ body {
     box-shadow: 0 10px 35px rgba(102, 126, 234, 0.7);
 }
 
+#controlScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 250;
+}
+
+#controlScreen.hidden {
+    display: none;
+}
+
+#controlScreen h2 {
+    color: #fff;
+    font-size: 28px;
+    margin-bottom: 40px;
+}
+
+#controlOptions {
+    display: flex;
+    gap: 40px;
+}
+
+.controlOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 20px;
+    border-radius: 12px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.controlOption:hover {
+    transform: translateY(-5px);
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.controlOption img {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+}
+
+.controlOption span {
+    color: #fff;
+    font-size: 18px;
+}
+
 #gameCanvas {
     border: 2px solid #4a4a6a;
     border-radius: 4px;

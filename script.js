@@ -240,10 +240,19 @@ canvas.addEventListener("touchend", e => {
 
 // ==================== 玩家移动 ====================
 function updatePlayer() {
-    if (keys["ArrowLeft"] && player.left() > 0) player.x -= player.speed;
-    if (keys["ArrowRight"] && player.right() < WIDTH) player.x += player.speed;
-    if (keys["ArrowUp"] && player.top() > 0) player.y -= player.speed;
-    if (keys["ArrowDown"] && player.bottom() < HEIGHT) player.y += player.speed;
+    // 键盘模式
+    if (controlMode === "keyboard") {
+        if (keys["ArrowLeft"] && player.left() > 0) player.x -= player.speed;
+        if (keys["ArrowRight"] && player.right() < WIDTH) player.x += player.speed;
+        if (keys["ArrowUp"] && player.top() > 0) player.y -= player.speed;
+        if (keys["ArrowDown"] && player.bottom() < HEIGHT) player.y += player.speed;
+    }
+
+    // 鼠标模式
+    if (controlMode === "mouse") {
+        player.x = mouseX - player.width / 2;
+        player.y = mouseY - player.height / 2;
+    }
 
     // 边界限制（键盘和触屏共用）
     if (player.x < 0) player.x = 0;
@@ -551,12 +560,55 @@ document.getElementById("restartBtn").addEventListener("click", () => {
 // ==================== 启动 ====================
 // 初始不自动启动，等待开始按钮
 let gameStarted = false;
+let controlMode = "keyboard"; // 控制模式: keyboard / mouse
+let mouseX = WIDTH / 2;
+let mouseY = HEIGHT / 2;
+
+// 判断是否为移动端
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || window.innerWidth < 768;
+}
 
 // ==================== 开始按钮 ====================
 document.getElementById("startBtn").addEventListener("click", () => {
     document.getElementById("startScreen").classList.add("hidden");
+    if (isMobile()) {
+        // 移动端直接开始游戏
+        if (!gameStarted) {
+            gameStarted = true;
+            requestAnimationFrame(gameLoop);
+        }
+    } else {
+        // PC端显示控制选择界面
+        document.getElementById("controlScreen").classList.remove("hidden");
+    }
+});
+
+// ==================== 控制方式选择 ====================
+document.getElementById("keyboardOption").addEventListener("click", () => {
+    controlMode = "keyboard";
+    document.getElementById("controlScreen").classList.add("hidden");
     if (!gameStarted) {
         gameStarted = true;
         requestAnimationFrame(gameLoop);
     }
+});
+
+document.getElementById("mouseOption").addEventListener("click", () => {
+    controlMode = "mouse";
+    document.getElementById("controlScreen").classList.add("hidden");
+    if (!gameStarted) {
+        gameStarted = true;
+        requestAnimationFrame(gameLoop);
+    }
+});
+
+// ==================== 鼠标移动跟踪 ====================
+canvas.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    mouseX = (e.clientX - rect.left) * scaleX;
+    mouseY = (e.clientY - rect.top) * scaleY;
 });
