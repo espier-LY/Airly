@@ -10,7 +10,6 @@ body {
     align-items: center;
     min-height: 100vh;
     background: #1a1a2e;
-
     position: relative;
 }
 
@@ -109,6 +108,7 @@ body {
     padding: 50px 70px;
     border-radius: 16px;
     text-align: center;
+
     box-shadow:
         0 25px 60px rgba(0, 0, 0, 0.4),
         0 10px 20px rgba(0, 0, 0, 0.2),
@@ -138,11 +138,33 @@ body {
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     transition: transform 0.2s, box-shadow 0.2s;
-
     pointer-events: auto;
 }
 
 #restartBtn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+@media screen and (max-width: 768px) {
+
+    body {
+        overflow: hidden;
+    }
+
+    #gameCanvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+    }
+
+    #startScreen {
+        width: 100vw;
+        height: 100vh;
+    }
+
+    #ui {
+        width: 100vw;
+        height: 100vh;
+    }
 }
