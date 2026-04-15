@@ -31,6 +31,15 @@ bossImg.src = "assets/1.1.png";
 const boss2Img = new Image();
 boss2Img.src = "assets/1.2.png";
 
+const boss3Img = new Image();
+boss3Img.src = "assets/2.1.png";
+
+const boss4Img = new Image();
+boss4Img.src = "assets/3.1.png";
+
+const boss5Img = new Image();
+boss5Img.src = "assets/4.1.png";
+
 // ==================== 游戏状态 ====================
 let obstacles = [];
 let powerups = [];
@@ -50,6 +59,7 @@ let rage_end_time = 0;
 let shield_hits = 0;
 
 let running = true;
+let highestScore = parseInt(localStorage.getItem(isMobile() ? "highestScore_mobile" : "highestScore_desktop")) || 0;
 
 // ==================== 玩家 ====================
 const player = {
@@ -137,11 +147,12 @@ function createObstacle(type = "normal") {
 
     for (let t = 0; t < maxTry; t++) {
 
+        let baseSize = (type === "boss" || type === "boss2" || type === "boss3" || type === "boss4") ? 98 : (type === "boss5" ? 147 : 65);
         let rect = {
-            x: Math.random() * (WIDTH - 65),
+            x: Math.random() * (WIDTH - baseSize),
             y: Math.random() * -300,
-            width: (type === "boss" || type === "boss2") ? 98 : 65,
-            height: (type === "boss" || type === "boss2") ? 98 : 65
+            width: baseSize,
+            height: baseSize
         };
 
         // ===== 扩展碰撞区域（防止贴太近）=====
@@ -173,25 +184,40 @@ function createObstacle(type = "normal") {
             let hp = 60;
             if (type === "gold") hp = 180;
             if (type === "red") hp = 360;
-            if (type === "boss") hp = 180;
-            if (type === "boss2") hp = 180;
+            if (type === "boss") hp = 200;
+            if (type === "boss2") hp = 220;
+            if (type === "boss3") hp = 240;
+            if (type === "boss4") hp = 260;
+            if (type === "boss5") hp = 280;
 
+            if (type === "boss5") {
+                return { rect, hp, type, lastAttackTime: 0, isMoving: false, stayStartTime: Date.now(), moveStartTime: 0, targetX: 0, direction: 0 };
+            }
             return { rect, hp, type, lastAttackTime: 0 };
         }
     }
 
     // ===== fallback（和 python 一样）=====
+    let fallbackSize = (type === "boss" || type === "boss2" || type === "boss3" || type === "boss4") ? 98 : (type === "boss5" ? 147 : 65);
     let rect = {
-        x: Math.random() * (WIDTH - 65),
-        y: -65,
-        width: type === "boss" ? 98 : 65,
-        height: type === "boss" ? 98 : 65
+        x: Math.random() * (WIDTH - fallbackSize),
+        y: -fallbackSize,
+        width: fallbackSize,
+        height: fallbackSize
     };
 
     let hp = 60;
     if (type === "gold") hp = 180;
     if (type === "red") hp = 360;
+    if (type === "boss") hp = 180;
+    if (type === "boss2") hp = 200;
+    if (type === "boss3") hp = 220;
+    if (type === "boss4") hp = 240;
+    if (type === "boss5") hp = 260;
 
+    if (type === "boss5") {
+        return { rect, hp, type, lastAttackTime: 0, isMoving: false, stayStartTime: Date.now(), moveStartTime: 0, targetX: 0, direction: 0 };
+    }
     return { rect, hp, type, lastAttackTime: 0 };
 }
 
@@ -272,22 +298,54 @@ function updatePlayer() {
 
 // ==================== 陨石生成 ====================
 function spawn() {
-    if (Math.random() < 1 / 50) {
-        if (Math.random() < 1 / 5) obstacles.push(createObstacle("red"));
-        else obstacles.push(createObstacle("normal"));
+    const sec = Math.floor(Date.now() / 1000);
+
+    // 根据游戏时间调整生成概率
+    let rateMultiplier = 1;
+    if (sec < 90) {
+        rateMultiplier = 1 / 3;
+    } else if (sec < 180) {
+        rateMultiplier = 1 / 2;
+    }
+
+    // 检查boss5所在行是否被占用
+    let boss5 = obstacles.find(o => o.type === "boss5");
+    let boss5RowBlocked = false;
+    if (boss5 && boss5.rect.y > 0) {
+        boss5RowBlocked = true;
+    }
+
+    if (Math.random() < (1 / 100) * rateMultiplier) {
+        if (!boss5RowBlocked) {
+            if (Math.random() < 1 / 5) obstacles.push(createObstacle("red"));
+            else obstacles.push(createObstacle("normal"));
+        }
     }
 
     // Boss生成：概率为普通陨石的1/6
-    if (Math.random() < 1 / 300) {
-        obstacles.push(createObstacle("boss"));
+    if (Math.random() < (1 / 600) * rateMultiplier) {
+        if (!boss5RowBlocked) obstacles.push(createObstacle("boss"));
     }
 
     // Boss2生成：概率为普通陨石的1/8
-    if (Math.random() < 1 / 400) {
-        obstacles.push(createObstacle("boss2"));
+    if (Math.random() < (1 / 800) * rateMultiplier) {
+        if (!boss5RowBlocked) obstacles.push(createObstacle("boss2"));
     }
 
-    const sec = Math.floor(Date.now() / 1000);
+    // Boss3生成：概率为普通陨石的1/12
+    if (Math.random() < (1 / 1200) * rateMultiplier) {
+        if (!boss5RowBlocked) obstacles.push(createObstacle("boss3"));
+    }
+
+    // Boss4生成：概率为普通陨石的1/16
+    if (Math.random() < (1 / 1600) * rateMultiplier) {
+        if (!boss5RowBlocked) obstacles.push(createObstacle("boss4"));
+    }
+
+    // Boss5生成：概率为普通陨石的1/20
+    if (Math.random() < 1 / 2000) {
+        obstacles.push(createObstacle("boss5"));
+    }
 
     if (
         sec >= 10 &&
@@ -372,16 +430,41 @@ function lasers() {
                 particles.push(new Particle(o.rect.x + 20, o.rect.y + 20));
             }
 
+            let addScore = 0;
             if (o.type === "gold") {
                 powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "arrow"));
-                score += 20;
+                addScore = 20;
             } else if (o.type === "red") {
                 if (Math.random() < 1 / 3) {
                     powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "shield"));
                 }
-                score += 50;
+                addScore = 50;
+            } else if (o.type === "boss") {
+                addScore = 10;
+            } else if (o.type === "boss2") {
+                addScore = 20;
+            } else if (o.type === "boss3") {
+                addScore = 30;
+            } else if (o.type === "boss4") {
+                addScore = 40;
+            } else if (o.type === "boss5") {
+                addScore = 50;
             } else {
-                score += 10;
+                addScore = 10;
+            }
+
+            // 暴走状态分数×2
+            if (rage_mode) addScore *= 2;
+            score += addScore;
+
+            // Boss掉落：1/10升级道具，1/20护盾道具，最多掉落一个
+            if (o.type === "boss" || o.type === "boss2" || o.type === "boss3" || o.type === "boss4") {
+                let rand = Math.random();
+                if (rand < 1 / 10) {
+                    powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "arrow"));
+                } else if (rand < 1 / 10 + 1 / 20) {
+                    powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "shield"));
+                }
             }
 
             obstacles.splice(i, 1);
@@ -436,6 +519,9 @@ function drawObstacles() {
         else if (o.type === "red") img = redImg;
         else if (o.type === "boss") img = bossImg;
         else if (o.type === "boss2") img = boss2Img;
+        else if (o.type === "boss3") img = boss3Img;
+        else if (o.type === "boss4") img = boss4Img;
+        else if (o.type === "boss5") img = boss5Img;
         else img = meteoriteImg;
 
         ctx.drawImage(img, o.rect.x, o.rect.y, o.rect.width, o.rect.height);
@@ -459,18 +545,30 @@ function drawObstacles() {
 // ==================== 游戏结束检查 ====================
 // Boss子弹碰撞检测
 function checkBossBulletCollision() {
+    let rageRadius = player.width / 2 + 30;
     for (let i = bossBullets.length - 1; i >= 0; i--) {
         let b = bossBullets[i];
         let dx = b.x - player.centerx();
         let dy = b.y - player.centery();
         let dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < b.radius + player.width / 10) {
+        if (rage_mode) {
+            // 暴走模式：光波碰撞检测
+            if (dist < rageRadius + b.radius) {
+                bossBullets.splice(i, 1);
+            }
+        } else if (dist < b.radius + player.width / 10) {
             if (shield_hits > 0) {
                 shield_hits--;
                 bossBullets.splice(i, 1);
             } else {
                 console.log("游戏结束");
                 running = false;
+                if (score > highestScore) {
+                    highestScore = score;
+                    localStorage.setItem(isMobile() ? "highestScore_mobile" : "highestScore_desktop", highestScore);
+                }
+                document.getElementById("highestScore").textContent = highestScore;
+                document.getElementById("startHighestScoreValue").textContent = highestScore;
                 document.getElementById("gameOver").classList.remove("hidden");
                 document.getElementById("finalScore").textContent = score;
                 return;
@@ -480,9 +578,30 @@ function checkBossBulletCollision() {
 }
 
 function checkGameOver() {
+    let rageRadius = player.width / 2 + 30;
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let o = obstacles[i];
-        if (collide(o.rect, {
+        if (rage_mode) {
+            // 暴走模式：光波碰撞检测
+            let ox = o.rect.x + o.rect.width / 2;
+            let oy = o.rect.y + o.rect.height / 2;
+            let dx = ox - player.centerx();
+            let dy = oy - player.centery();
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < rageRadius + o.rect.width / 2) {
+                // 暴走碰撞击落获得分数
+                let addScore = 10;
+                if (o.type === "gold") addScore = 20;
+                else if (o.type === "red") addScore = 50;
+                else if (o.type === "boss") addScore = 10;
+                else if (o.type === "boss2") addScore = 20;
+                else if (o.type === "boss3") addScore = 30;
+                else if (o.type === "boss4") addScore = 40;
+                else if (o.type === "boss5") addScore = 50;
+                score += addScore * 2; // 暴走状态×2
+                obstacles.splice(i, 1);
+            }
+        } else if (collide(o.rect, {
             x: player.x,
             y: player.y,
             width: player.width,
@@ -495,8 +614,15 @@ function checkGameOver() {
             } else {
                 console.log("游戏结束");
                 running = false;
+                if (score > highestScore) {
+                    highestScore = score;
+                    localStorage.setItem(isMobile() ? "highestScore_mobile" : "highestScore_desktop", highestScore);
+                }
+                document.getElementById("highestScore").textContent = highestScore;
+                document.getElementById("startHighestScoreValue").textContent = highestScore;
                 document.getElementById("gameOver").classList.remove("hidden");
                 document.getElementById("finalScore").textContent = score;
+                return;
             }
         }
     }
@@ -537,7 +663,98 @@ function gameLoop(currentTime) {
     // Boss发射子弹
     const now = Date.now();
     for (let o of obstacles) {
-        if (o.type === "boss" && o.rect.y > 0) {
+        if (o.type === "boss5" && o.rect.y > 0) {
+            // 初始化boss5发射状态
+            if (o.boss5AttackState === undefined) {
+                o.boss5AttackState = {
+                    phase: 'waiting', // waiting, attacking, finished
+                    bulletsFired: 0, // 每方向已发射子弹数
+                    lastAttackTime: 0
+                };
+            }
+
+            // boss5移动逻辑
+            if (!o.isMoving) {
+                // 静止状态，检查是否需要移动或开始攻击
+                if (o.boss5AttackState.phase === 'waiting' && now - o.stayStartTime >= 1000) {
+                    // 决定移动方向
+                    let moveDistance = o.rect.width;
+                    let canLeft = o.rect.x - moveDistance >= 0;
+                    let canRight = o.rect.x + o.rect.width + moveDistance <= WIDTH;
+
+                    if (canLeft && canRight) {
+                        o.direction = Math.random() < 0.5 ? -1 : 1;
+                    } else if (canLeft) {
+                        o.direction = -1;
+                    } else if (canRight) {
+                        o.direction = 1;
+                    } else {
+                        o.direction = 0;
+                    }
+
+                    if (o.direction !== 0) {
+                        o.isMoving = true;
+                        o.moveStartTime = now;
+                        o.targetX = o.rect.x + o.direction * moveDistance;
+                    } else {
+                        o.stayStartTime = now;
+                    }
+                }
+
+                // 到达新位置后发射一次子弹（三个方向各3个，共9个）
+                if (o.boss5AttackState.phase === 'waiting' && now - o.stayStartTime >= 1000) {
+                    let bx = o.rect.x + o.rect.width / 2;
+                    let by = o.rect.y + o.rect.height / 2;
+                    let spd = 6;
+                    let spacing = 30;
+                    // 三个方向：下、左下、右下，每个方向3个子弹，间隔30像素
+                    let dirs = [
+                        { vx: 0, vy: spd },                    // 下
+                        { vx: -spd * 0.707, vy: spd * 0.707 },  // 左下
+                        { vx: spd * 0.707, vy: spd * 0.707 }    // 右下
+                    ];
+                    for (let d of dirs) {
+                        // 归一化方向向量
+                        let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                        let nx = d.vx / len;
+                        let ny = d.vy / len;
+                        for (let j = 0; j < 3; j++) {
+                            let offset = j * spacing;
+                            bossBullets.push({
+                                x: bx + nx * offset,
+                                y: by + ny * offset,
+                                radius: player.width / 12,
+                                vx: d.vx,
+                                vy: d.vy
+                            });
+                        }
+                    }
+                    o.boss5AttackState.phase = 'finished';
+                }
+
+                // 等待下一次移动
+                if (o.boss5AttackState.phase === 'finished') {
+                    // 什么都不做，等待移动触发
+                }
+            } else {
+                // 移动状态，0.5秒内匀速移动
+                let elapsed = now - o.moveStartTime;
+                if (elapsed >= 500) {
+                    o.rect.x = o.targetX;
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    // 到达新位置，重置攻击状态
+                    o.boss5AttackState.phase = 'waiting';
+                    o.boss5AttackState.bulletsFired = 0;
+                } else {
+                    let startX = o.rect.x;
+                    let targetX = o.targetX;
+                    let progress = elapsed / 500;
+                    o.rect.x = startX + (targetX - startX) * progress;
+                }
+            }
+        }
+        if ((o.type === "boss" || o.type === "boss5") && o.rect.y > 0 && o.type !== "boss5") {
             if (now - o.lastAttackTime >= 1000) {
                 bossBullets.push({
                     x: o.rect.x + o.rect.width / 2,
@@ -545,6 +762,38 @@ function gameLoop(currentTime) {
                     radius: player.width / 12,
                     speed: 6
                 });
+                o.lastAttackTime = now;
+            }
+        }
+        if (o.type === "boss4" && o.rect.y > 0) {
+            if (now - o.lastAttackTime >= 1000) {
+                let bx = o.rect.x + o.rect.width / 2;
+                let by = o.rect.y + o.rect.height / 2;
+                let spd = 6;
+                // 8个方向：上、下、左、右、左上、左下、右上、右下
+                let dirs = [
+                    { vx: 0, vy: -spd },      // 上
+                    { vx: 0, vy: spd },       // 下
+                    { vx: -spd, vy: 0 },      // 左
+                    { vx: spd, vy: 0 },       // 右
+                    { vx: -spd * 0.707, vy: -spd * 0.707 },  // 左上
+                    { vx: -spd * 0.707, vy: spd * 0.707 },   // 左下
+                    { vx: spd * 0.707, vy: -spd * 0.707 },  // 右上
+                    { vx: spd * 0.707, vy: spd * 0.707 }    // 右下
+                ];
+                for (let d of dirs) {
+                    bossBullets.push({ x: bx, y: by, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                }
+                o.lastAttackTime = now;
+            }
+        }
+        if (o.type === "boss3" && o.rect.y > 0) {
+            if (now - o.lastAttackTime >= 1000) {
+                let bx = o.rect.x + o.rect.width / 2;
+                let by = o.rect.y + o.rect.height;
+                bossBullets.push({ x: bx, y: by, radius: player.width / 12, speed: 6 });
+                bossBullets.push({ x: bx, y: by - 30, radius: player.width / 12, speed: 6 });
+                bossBullets.push({ x: bx, y: by - 30, radius: player.width / 12, speed: 6 });
                 o.lastAttackTime = now;
             }
         }
@@ -556,8 +805,8 @@ function gameLoop(currentTime) {
                 let dy = player.centery() - by;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 0) {
-                    let vx = (dx / dist) * 6;
-                    let vy = (dy / dist) * 6;
+                    let vx = (dx / dist) * 4;
+                    let vy = (dy / dist) * 4;
                     // 垂直于速度方向的单位向量（用于间隔30像素）
                     let px = -vy / 6 * 15;
                     let py = vx / 6 * 15;
@@ -604,6 +853,30 @@ function gameLoop(currentTime) {
 
     // 绘制玩家飞机（使用贴图）
     ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+
+    // 暴走模式光波
+    if (rage_mode) {
+        let rageRadius = player.width / 2 + 30;
+        let cx = player.centerx();
+        let cy = player.centery();
+
+        // 金色光晕（外层渐变）
+        let glowGradient = ctx.createRadialGradient(cx, cy, rageRadius, cx, cy, rageRadius + 15);
+        glowGradient.addColorStop(0, "rgba(255, 215, 0, 0.4)");
+        glowGradient.addColorStop(1, "rgba(255, 215, 0, 0)");
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rageRadius + 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 金色光圈（闪烁）
+        let flashAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 100);
+        ctx.strokeStyle = `rgba(255, 215, 0, ${flashAlpha})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rageRadius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
 
     // 绘制Boss子弹
     for (let b of bossBullets) {

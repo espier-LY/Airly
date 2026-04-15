@@ -179,9 +179,17 @@ body {
 }
 
 .game-over-content p {
-    font-size: 20px;
     color: #666;
     margin-bottom: 30px;
+}
+
+.final-score-p {
+    font-size: 28px;
+    color: #333;
+}
+
+.highest-score-p {
+    font-size: 20px;
 }
 
 #restartBtn {

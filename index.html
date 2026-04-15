@@ -10,6 +10,7 @@
     <canvas id="gameCanvas"></canvas>
     <div id="startScreen">
         <img id="gameIcon" src="assets/icon.png" alt="Game Icon">
+        <p id="startHighestScore">最高得分: <span id="startHighestScoreValue">0</span></p>
         <button id="startBtn">开始游戏</button>
     </div>
     <div id="controlScreen" class="hidden">
@@ -30,7 +31,8 @@
         <div id="gameOver" class="hidden">
             <div class="game-over-content">
                 <h2>游戏结束</h2>
-                <p>最终得分: <span id="finalScore">0</span></p>
+                <p class="final-score-p">最终得分: <span id="finalScore">0</span></p>
+                <p class="highest-score-p">最高得分: <span id="highestScore">0</span></p>
                 <button id="restartBtn">重新开始</button>
             </div>
         </div>
