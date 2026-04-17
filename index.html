@@ -26,6 +26,48 @@
             </div>
         </div>
     </div>
+    <div id="modeScreen" class="hidden">
+        <h2>选择游戏模式</h2>
+        <div id="modeOptions">
+            <div id="endlessOption" class="controlOption">
+                <img src="assets/Model1.jpg" alt="Endless Mode">
+                <span>无尽模式</span>
+            </div>
+            <div id="bossOption" class="controlOption">
+                <img src="assets/Model2.jpg" alt="Boss Mode">
+                <span>Boss模式</span>
+            </div>
+        </div>
+        <button id="backToControlBtn" class="backBtn">返回</button>
+    </div>
+    <div id="bossSelectScreen" class="hidden">
+        <h2>Boss选择</h2>
+        <div id="bossOptions">
+            <div id="boss1Option" class="bossOption">
+                <img src="assets/3.1.1.png" alt="Boss 1">
+                <button id="boss1Btn" class="bossBtn">熔岩飞轮</button>
+            </div>
+            <div id="boss2Option" class="bossOption">
+                <img src="assets/4.1.1.png" alt="Boss 2">
+                <button id="boss2Btn" class="bossBtn">超时空战神</button>
+            </div>
+        </div>
+        <button id="backToModeFromBossBtn" class="backBtn">返回</button>
+    </div>
+    <div id="bossGameOver" class="hidden">
+        <div class="game-over-content">
+            <h2>游戏结束</h2>
+            <button id="boss1RestartBtn">重新开始</button>
+            <button id="boss1BackBtn" class="backToModeBtn">返回</button>
+        </div>
+    </div>
+    <div id="boss2GameOver" class="hidden">
+        <div class="game-over-content">
+            <h2>游戏结束</h2>
+            <button id="boss2RestartBtn">重新开始</button>
+            <button id="boss2BackBtn" class="backToModeBtn">返回</button>
+        </div>
+    </div>
     <div id="ui">
         <div id="scoreDisplay">分数: <span id="scoreValue">0</span></div>
         <div id="gameOver" class="hidden">
@@ -34,6 +76,7 @@
                 <p class="final-score-p">最终得分: <span id="finalScore">0</span></p>
                 <p class="highest-score-p">最高得分: <span id="highestScore">0</span></p>
                 <button id="restartBtn">重新开始</button>
+                <button id="backToModeBtn" class="backToModeBtn">返回主页</button>
             </div>
         </div>
     </div>

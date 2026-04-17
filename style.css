@@ -19,7 +19,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: #000;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -63,7 +63,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: #000;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -73,6 +73,134 @@ body {
 
 #controlScreen.hidden {
     display: none;
+}
+
+#modeScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 240;
+}
+
+#modeScreen.hidden {
+    display: none;
+}
+
+#modeScreen h2 {
+    color: #fff;
+    font-size: 28px;
+    margin-bottom: 40px;
+}
+
+#modeOptions {
+    display: flex;
+    gap: 40px;
+}
+
+.backBtn {
+    margin-top: 40px;
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 40px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.backBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+#bossSelectScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 240;
+}
+
+#bossSelectScreen.hidden {
+    display: none;
+}
+
+#bossSelectScreen h2 {
+    color: #fff;
+    font-size: 28px;
+    margin-bottom: 40px;
+}
+
+#bossOptions {
+    display: flex;
+    gap: 60px;
+}
+
+.bossOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bossOption img {
+    width: 150px;
+    height: 150px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+}
+
+#bossGameOver,
+#boss2GameOver {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    z-index: 200;
+}
+
+#bossGameOver.hidden,
+#boss2GameOver.hidden {
+    display: none;
+}
+
+.bossBtn {
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bossBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
 #controlScreen h2 {
@@ -206,6 +334,46 @@ body {
 }
 
 #restartBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+#boss1RestartBtn,
+#boss2RestartBtn {
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 50px;
+    font-size: 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    pointer-events: auto;
+}
+
+#boss1RestartBtn:hover,
+#boss2RestartBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.backToModeBtn {
+    display: block;
+    margin: 15px auto 0;
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 50px;
+    font-size: 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    pointer-events: auto;
+}
+
+.backToModeBtn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }

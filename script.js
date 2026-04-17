@@ -40,6 +40,12 @@ boss4Img.src = "assets/3.1.png";
 const boss5Img = new Image();
 boss5Img.src = "assets/4.1.png";
 
+const boss6Img = new Image();
+boss6Img.src = "assets/4.1.1.png";
+
+const boss7Img = new Image();
+boss7Img.src = "assets/3.1.1.png";
+
 // ==================== 游戏状态 ====================
 let obstacles = [];
 let powerups = [];
@@ -57,8 +63,19 @@ let rage_mode = false;
 let rage_end_time = 0;
 
 let shield_hits = 0;
+let invincible = false;
+let invincibleEndTime = 0;
+
+let boss6Phase = "none"; // none, waiting_clear, warning, appearing, active, defeated
+let boss6StartTime = 0;
+let boss6Triggered = false; // 防止重复触发
+
+let boss7Phase = "none";
+let boss7StartTime = 0;
+let boss7Triggered = false;
 
 let running = true;
+let animationId = null;
 let highestScore = parseInt(localStorage.getItem(isMobile() ? "highestScore_mobile" : "highestScore_desktop")) || 0;
 
 // ==================== 玩家 ====================
@@ -298,14 +315,127 @@ function updatePlayer() {
 
 // ==================== 陨石生成 ====================
 function spawn() {
-    const sec = Math.floor(Date.now() / 1000);
+    const sec = Math.floor((Date.now() - gameStartTime) / 1000);
 
+    // Boss6阶段检测：120秒时触发（仅在游戏已开始后）
+    if (gameStarted && boss6Phase === "none" && sec >= 60 && !boss6Triggered) {
+        boss6Triggered = true;
+        boss6Phase = "waiting_clear";
+        boss6StartTime = Date.now();
+    }
+
+    // Boss7阶段检测：60秒时触发
+    if (gameStarted && boss7Phase === "none" && sec >= 5 && !boss7Triggered) {
+        boss7Triggered = true;
+        boss7Phase = "waiting_clear";
+        boss7StartTime = Date.now();
+    }
+
+    // Boss6阶段处理
+    if (boss6Phase === "waiting_clear") {
+        // 等待所有陨石和boss消失
+        if (obstacles.length === 0) {
+            boss6Phase = "warning";
+            boss6StartTime = Date.now();
+        }
+        return; // 停止生成陨石
+    } else if (boss6Phase === "warning") {
+        // 显示"终极boss来袭"1秒后消失
+        if (Date.now() - boss6StartTime >= 1000) {
+            boss6Phase = "waiting_after_warning";
+            boss6StartTime = Date.now();
+        }
+        return; // 停止生成陨石
+    } else if (boss6Phase === "waiting_after_warning") {
+        // 警告消失后再等1秒，然后出现Boss6
+        if (Date.now() - boss6StartTime >= 1000) {
+            boss6Phase = "appearing";
+            boss6StartTime = Date.now();
+            // 创建Boss6在屏幕顶端中央
+            let rect = {
+                x: (WIDTH - 294) / 2,
+                y: -294,
+                width: 294,
+                height: 294
+            };
+            obstacles.push({ rect, hp: 10000, type: "boss6", lastAttackTime: 0 });
+        }
+        return; // 停止生成陨石
+    } else if (boss6Phase === "appearing") {
+        // Boss6从顶部逐渐展示，完全显示后停在顶端
+        let boss6 = obstacles.find(o => o.type === "boss6");
+        if (boss6 && boss6.rect.y < 0) {
+            boss6.rect.y += 4;
+            return; // 继续显示，不生成陨石
+        } else if (boss6) {
+            boss6.rect.y = 60;
+            boss6Phase = "active";
+            return; // 停止生成陨石
+        }
+    } else if (boss6Phase === "active") {
+        // Boss6激活状态，不生成新陨石，且不移动
+        return;
+    } else if (boss6Phase === "defeated") {
+        // Boss6被击败后2秒恢复生成
+        if (Date.now() - boss6StartTime >= 2000) {
+            boss6Phase = "none";
+            // 不重置boss6Triggered，确保boss6只触发一次
+        }
+        // 不return，让代码继续执行正常生成逻辑
+    }
+
+    // Boss7阶段处理
+    if (boss7Phase === "waiting_clear") {
+        if (obstacles.length === 0) {
+            boss7Phase = "warning";
+            boss7StartTime = Date.now();
+        }
+        return;
+    } else if (boss7Phase === "warning") {
+        if (Date.now() - boss7StartTime >= 1000) {
+            boss7Phase = "waiting_after_warning";
+            boss7StartTime = Date.now();
+        }
+        return;
+    } else if (boss7Phase === "waiting_after_warning") {
+        if (Date.now() - boss7StartTime >= 1000) {
+            boss7Phase = "appearing";
+            boss7StartTime = Date.now();
+            let rect = {
+                x: (WIDTH - 294) / 2,
+                y: -294,
+                width: 294,
+                height: 294
+            };
+            obstacles.push({ rect, hp: 8000, type: "boss7", lastAttackTime: 0 });
+        }
+        return;
+    } else if (boss7Phase === "appearing") {
+        let boss7 = obstacles.find(o => o.type === "boss7");
+        if (boss7 && boss7.rect.y < 0) {
+            boss7.rect.y += 4;
+            return;
+        } else if (boss7) {
+            boss7.rect.y = 210;
+            boss7Phase = "active";
+            return;
+        }
+    } else if (boss7Phase === "active") {
+        return;
+    } else if (boss7Phase === "defeated") {
+        if (Date.now() - boss7StartTime >= 2000) {
+            boss7Phase = "none";
+        }
+        // 不return，让代码继续执行正常生成逻辑
+    }
+
+    // 以下为普通生成逻辑（boss6和boss7未激活时执行）
     // 根据游戏时间调整生成概率
     let rateMultiplier = 1;
     if (sec < 90) {
-        rateMultiplier = 1 / 3;
-    } else if (sec < 180) {
         rateMultiplier = 1 / 2;
+    } else if (sec < 180) {
+        rateMultiplier = 3 / 4;
     }
 
     // 检查boss5所在行是否被占用
@@ -419,7 +549,7 @@ function lasers() {
     }
 
     hit.forEach(i => {
-    obstacles[i].hp -= 2;
+        obstacles[i].hp -= 2;
     });
     
 
@@ -449,6 +579,40 @@ function lasers() {
                 addScore = 40;
             } else if (o.type === "boss5") {
                 addScore = 50;
+                // Boss5死亡爆炸：8个方向各3个子弹
+                let bx = o.rect.x + o.rect.width / 2;
+                let by = o.rect.y + o.rect.height / 2;
+                let spd = 6;
+                let spacing = 30;
+                let dirs = [
+                    { vx: 0, vy: -spd },                      // 上
+                    { vx: 0, vy: spd },                       // 下
+                    { vx: -spd, vy: 0 },                      // 左
+                    { vx: spd, vy: 0 },                       // 右
+                    { vx: -spd * 0.707, vy: -spd * 0.707 },  // 左上
+                    { vx: -spd * 0.707, vy: spd * 0.707 },   // 左下
+                    { vx: spd * 0.707, vy: -spd * 0.707 },   // 右上
+                    { vx: spd * 0.707, vy: spd * 0.707 }     // 右下
+                ];
+                for (let d of dirs) {
+                    let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                    let nx = d.vx / len;
+                    let ny = d.vy / len;
+                    for (let j = 0; j < 3; j++) {
+                        let offset = j * spacing;
+                        bossBullets.push({
+                            x: bx + nx * offset,
+                            y: by + ny * offset,
+                            radius: player.width / 12,
+                            vx: d.vx,
+                            vy: d.vy
+                        });
+                    }
+                }
+            } else if (o.type === "boss6") {
+                addScore = 500;
+            } else if (o.type === "boss7") {
+                addScore = 500;
             } else {
                 addScore = 10;
             }
@@ -465,6 +629,28 @@ function lasers() {
                 } else if (rand < 1 / 10 + 1 / 20) {
                     powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "shield"));
                 }
+            }
+
+            // Boss5掉落：概率提高5倍（1/2箭头，1/4护盾）
+            if (o.type === "boss5") {
+                let rand = Math.random();
+                if (rand < 1 / 2) {
+                    powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "arrow"));
+                } else if (rand < 1 / 2 + 1 / 4) {
+                    powerups.push(new PowerUp(o.rect.x + 5, o.rect.y + 5, "shield"));
+                }
+            }
+
+            // Boss6被击败
+            if (o.type === "boss6") {
+                boss6Phase = "defeated";
+                boss6StartTime = Date.now();
+            }
+
+            // Boss7被击败
+            if (o.type === "boss7") {
+                boss7Phase = "defeated";
+                boss7StartTime = Date.now();
             }
 
             obstacles.splice(i, 1);
@@ -522,6 +708,8 @@ function drawObstacles() {
         else if (o.type === "boss3") img = boss3Img;
         else if (o.type === "boss4") img = boss4Img;
         else if (o.type === "boss5") img = boss5Img;
+        else if (o.type === "boss6") img = boss6Img;
+        else if (o.type === "boss7") img = boss7Img;
         else img = meteoriteImg;
 
         ctx.drawImage(img, o.rect.x, o.rect.y, o.rect.width, o.rect.height);
@@ -531,14 +719,22 @@ function drawObstacles() {
         if (o.type === "gold") hp_max = 180;
         if (o.type === "red") hp_max = 360;
         if (o.type === "boss") hp_max = 180;
+        if (o.type === "boss6") hp_max = 10000;
+        if (o.type === "boss7") hp_max = 8000;
+
+        // boss6和boss7在完全出现后才显示血条
+        if ((o.type === "boss6" || o.type === "boss7") && o.rect.y < 0) continue;
 
         let hp_ratio = Math.min(Math.max(o.hp / hp_max, 0), 1);
 
+        // 血条位置
+        let hp_y = o.rect.y - 10;
+
         ctx.fillStyle = "rgb(120,0,0)";
-        ctx.fillRect(o.rect.x, o.rect.y - 10, o.rect.width, 6);
+        ctx.fillRect(o.rect.x, hp_y, o.rect.width, 6);
 
         ctx.fillStyle = "rgb(0,255,0)";
-        ctx.fillRect(o.rect.x, o.rect.y - 10, Math.floor(o.rect.width * hp_ratio), 6);
+        ctx.fillRect(o.rect.x, hp_y, Math.floor(o.rect.width * hp_ratio), 6);
     }
 }
 
@@ -559,8 +755,10 @@ function checkBossBulletCollision() {
         } else if (dist < b.radius + player.width / 10) {
             if (shield_hits > 0) {
                 shield_hits--;
+                invincible = true;
+                invincibleEndTime = Date.now() + 1000;
                 bossBullets.splice(i, 1);
-            } else {
+            } else if (!invincible) {
                 console.log("游戏结束");
                 running = false;
                 if (score > highestScore) {
@@ -589,7 +787,9 @@ function checkGameOver() {
             let dy = oy - player.centery();
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < rageRadius + o.rect.width / 2) {
-                // 暴走碰撞击落获得分数
+                // 暴走碰撞击落获得分数（boss6、boss7除外）
+                if (o.type === "boss6" || o.type === "boss7") continue;
+
                 let addScore = 10;
                 if (o.type === "gold") addScore = 20;
                 else if (o.type === "red") addScore = 50;
@@ -608,10 +808,18 @@ function checkGameOver() {
             height: player.height
         })) {
             if (shield_hits > 0) {
+                if (o.type === "boss6" || o.type === "boss7") {
+                    shield_hits--;
+                    invincible = true;
+                    invincibleEndTime = Date.now() + 1000;
+                    continue;
+                }
                 shield_hits--;
+                invincible = true;
+                invincibleEndTime = Date.now() + 1000;
                 obstacles.splice(i, 1);
                 continue;
-            } else {
+            } else if (!invincible) {
                 console.log("游戏结束");
                 running = false;
                 if (score > highestScore) {
@@ -638,8 +846,12 @@ function gameLoop(currentTime) {
     window.lastTime = currentTime;
 
     if (!running) {
-        requestAnimationFrame(gameLoop);
         return;
+    }
+
+    // 无敌时间检查
+    if (invincible && Date.now() > invincibleEndTime) {
+        invincible = false;
     }
 
     // 清屏
@@ -652,11 +864,16 @@ function gameLoop(currentTime) {
         rage_mode = false;
     }
 
+    // 移除出界陨石（提前到spawn之前，确保waiting_clear正确检测）
+    obstacles = obstacles.filter(o => o.rect.y < HEIGHT);
+
     updatePlayer();
     spawn();
 
-    // 更新陨石位置
+    // 更新陨石位置（boss6、boss7固定在顶端不移动）
     for (let o of obstacles) {
+        if (o.type === "boss6" && boss6Phase === "active") continue;
+        if (o.type === "boss7" && boss7Phase === "active") continue;
         o.rect.y += 4 * dt;
     }
 
@@ -754,6 +971,281 @@ function gameLoop(currentTime) {
                 }
             }
         }
+        // Boss6攻击
+        if (o.type === "boss6" && boss6Phase === "active" && o.rect.y >= 0) {
+            // 初始化boss6移动状态
+            if (o.isMoving === undefined) {
+                o.isMoving = false;
+                o.stayStartTime = now;
+                o.moveStartTime = 0;
+                o.targetX = o.rect.x;
+                o.startX = o.rect.x;
+                o.boss6Phase = 1; // 1=第一阶段, 2=第二阶段, 3=过渡期
+                o.phaseTransitionTime = 0;
+                o.lastAttackTime = 0;
+                o.boss6SingleShotTime = 0;
+            }
+
+            // 阶段检测：血量低于一半时切换到第二阶段
+            let hpMax = 10000;
+            if (o.boss6Phase === 1 && o.hp <= hpMax / 2) {
+                o.boss6Phase = 3; // 过渡期
+                o.phaseTransitionTime = now;
+            }
+
+            // 过渡期：休息1秒后进入第二阶段
+            if (o.boss6Phase === 3) {
+                if (now - o.phaseTransitionTime >= 1000) {
+                    o.boss6Phase = 2;
+                    o.stayStartTime = now;
+                    o.isMoving = false;
+                }
+                // 过渡期不攻击，不移动
+                continue;
+            }
+
+            if (!o.isMoving) {
+                // 静止状态，检查是否需要移动
+                if (now - o.stayStartTime >= 5000) {
+                    // 决定移动方向，随机向左或向右移动50-100像素
+                    let moveDistance = 50 + Math.random() * 50;
+                    let direction = Math.random() < 0.5 ? -1 : 1;
+                    let newX = o.rect.x + direction * moveDistance;
+                    // 边界检查
+                    newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                    o.targetX = newX;
+                    o.startX = o.rect.x;
+                    o.isMoving = true;
+                    o.moveStartTime = now;
+                }
+            } else {
+                // 移动状态，0.5秒内匀速移动
+                let elapsed = now - o.moveStartTime;
+                if (elapsed >= 500) {
+                    o.rect.x = o.targetX;
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                } else {
+                    let progress = elapsed / 500;
+                    o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                }
+            }
+
+            // 静止时攻击
+            if (!o.isMoving) {
+                if (o.boss6Phase === 1) {
+                    // 第一阶段：每1秒5个方向，每方向3颗子弹，速度6
+                    if (now - o.lastAttackTime >= 1000) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let spd = 6;
+                        let spacing = 30;
+                        let dirs = [
+                            { vx: spd * 0.866, vy: spd * 0.5 },     // -30°
+                            { vx: spd * 0.5, vy: spd * 0.866 },     // -60°
+                            { vx: 0, vy: spd },                      // -90°
+                            { vx: -spd * 0.5, vy: spd * 0.866 },   // -120°
+                            { vx: -spd * 0.866, vy: spd * 0.5 }    // -150°
+                        ];
+                        for (let d of dirs) {
+                            let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                            let nx = d.vx / len;
+                            let ny = d.vy / len;
+                            for (let j = 0; j < 3; j++) {
+                                let offset = j * spacing;
+                                bossBullets.push({
+                                    x: bx + nx * offset,
+                                    y: by + ny * offset,
+                                    radius: player.width / 12,
+                                    vx: d.vx,
+                                    vy: d.vy
+                                });
+                            }
+                        }
+                        o.lastAttackTime = now;
+                    }
+                    // 向飞机发射单个子弹，每0.5秒一次，速度1
+                    if (now - o.boss6SingleShotTime >= 500) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            bossBullets.push({
+                                x: bx,
+                                y: by,
+                                radius: player.width / 12,
+                                vx: (dx / dist) * 1,
+                                vy: (dy / dist) * 1
+                            });
+                        }
+                        o.boss6SingleShotTime = now;
+                    }
+                } else if (o.boss6Phase === 2) {
+                    // 第二阶段：每1秒10个方向，每方向6颗子弹，速度8
+                    if (now - o.lastAttackTime >= 1000) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let spd = 8;
+                        let spacing = 30;
+                        let dirs = [
+                            { vx: spd * 0.966, vy: spd * 0.259 },    // -15°
+                            { vx: spd * 0.866, vy: spd * 0.5 },     // -30°
+                            { vx: spd * 0.707, vy: spd * 0.707 },   // -45°
+                            { vx: spd * 0.5, vy: spd * 0.866 },     // -60°
+                            { vx: spd * 0.259, vy: spd * 0.966 },   // -75°
+                            { vx: 0, vy: spd },                      // -90°
+                            { vx: -spd * 0.259, vy: spd * 0.966 }, // -105°
+                            { vx: -spd * 0.5, vy: spd * 0.866 },   // -120°
+                            { vx: -spd * 0.707, vy: spd * 0.707 }, // -135°
+                            { vx: -spd * 0.866, vy: spd * 0.5 }    // -150°
+                        ];
+                        for (let d of dirs) {
+                            let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                            let nx = d.vx / len;
+                            let ny = d.vy / len;
+                            for (let j = 0; j < 6; j++) {
+                                let offset = j * spacing;
+                                bossBullets.push({
+                                    x: bx + nx * offset,
+                                    y: by + ny * offset,
+                                    radius: player.width / 12,
+                                    vx: d.vx,
+                                    vy: d.vy
+                                });
+                            }
+                        }
+                        o.lastAttackTime = now;
+                    }
+                    // 向飞机发射单个子弹，每0.5秒一次，速度2
+                    if (now - o.boss6SingleShotTime >= 500) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            bossBullets.push({
+                                x: bx,
+                                y: by,
+                                radius: player.width / 12,
+                                vx: (dx / dist) * 2,
+                                vy: (dy / dist) * 2
+                            });
+                        }
+                        o.boss6SingleShotTime = now;
+                    }
+                }
+            }
+        }
+        // Boss7攻击
+        if (o.type === "boss7" && boss7Phase === "active" && o.rect.y >= 0) {
+            if (o.isMoving === undefined) {
+                o.isMoving = false;
+                o.stayStartTime = now;
+                o.moveStartTime = 0;
+                o.targetX = o.rect.x;
+                o.startX = o.rect.x;
+                o.boss7Phase = 1;
+                o.phaseTransitionTime = 0;
+                o.lastAttackTime = 0;
+                o.boss7SingleShotTime = 0;
+                o.boss7RotateAngle = 0;
+            }
+            let hpMax = 8000;
+            if (o.boss7Phase === 1 && o.hp <= hpMax / 2) {
+                o.boss7Phase = 3;
+                o.phaseTransitionTime = now;
+            }
+            if (o.boss7Phase === 3) {
+                if (now - o.phaseTransitionTime >= 1000) {
+                    o.boss7Phase = 2;
+                    o.stayStartTime = now;
+                    o.isMoving = false;
+                }
+                continue;
+            }
+            if (!o.isMoving) {
+                if (now - o.stayStartTime >= 2000) {
+                    let moveDistance = 50 + Math.random() * 50;
+                    let direction = Math.random() < 0.5 ? -1 : 1;
+                    let newX = o.rect.x + direction * moveDistance;
+                    newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                    o.targetX = newX;
+                    o.startX = o.rect.x;
+                    o.isMoving = true;
+                    o.moveStartTime = now;
+                }
+            } else {
+                let elapsed = now - o.moveStartTime;
+                if (elapsed >= 500) {
+                    o.rect.x = o.targetX;
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                } else {
+                    let progress = elapsed / 500;
+                    o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                }
+            }
+            if (!o.isMoving) {
+                if (o.boss7Phase === 1) {
+                    // 第一阶段：12个方向固定发射子弹，间隔30像素，速度6
+                    if (now - o.lastAttackTime >= 100) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let spd = 6;
+                        let dirs = [
+                            { vx: spd * 0.866, vy: -spd * 0.5 },   // -30°
+                            { vx: spd * 0.5, vy: -spd * 0.866 },   // -60°
+                            { vx: 0, vy: -spd },                    // -90°
+                            { vx: -spd * 0.5, vy: -spd * 0.866 },  // -120°
+                            { vx: -spd * 0.866, vy: -spd * 0.5 },  // -150°
+                            { vx: spd * 0.866, vy: spd * 0.5 },    // 30°
+                            { vx: spd * 0.5, vy: spd * 0.866 },    // 60°
+                            { vx: 0, vy: spd },                     // 90°
+                            { vx: -spd * 0.5, vy: spd * 0.866 },   // 120°
+                            { vx: -spd * 0.866, vy: spd * 0.5 },   // 150°
+                            { vx: -spd, vy: 0 },                    // 180°
+                            { vx: spd, vy: 0 }                     // -180°
+                        ];
+                        for (let d of dirs) {
+                            let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                            let nx = d.vx / len;
+                            let ny = d.vy / len;
+                            bossBullets.push({ x: bx + nx * 30, y: by + ny * 30, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                            bossBullets.push({ x: bx + nx * 60, y: by + ny * 60, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                            bossBullets.push({ x: bx + nx * 90, y: by + ny * 90, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                        }
+                        o.lastAttackTime = now;
+                    }
+                } else if (o.boss7Phase === 2) {
+                    // 第二阶段：12个方向旋转发射子弹，间隔30像素，速度6
+                    if (now - o.lastAttackTime >= 100) {
+                        let bx = o.rect.x + o.rect.width / 2;
+                        let by = o.rect.y + o.rect.height / 2;
+                        let spd = 6;
+                        let baseAngles = [
+                            -Math.PI / 6, -Math.PI / 3, -Math.PI / 2, -2 * Math.PI / 3, -5 * Math.PI / 6,
+                            Math.PI / 6, Math.PI / 3, Math.PI / 2, 2 * Math.PI / 3, 5 * Math.PI / 6,
+                            Math.PI, -Math.PI
+                        ];
+                        o.boss7RotateAngle += 0.05;
+                        for (let baseAngle of baseAngles) {
+                            let angle = baseAngle + o.boss7RotateAngle;
+                            let vx = Math.cos(angle) * spd;
+                            let vy = Math.sin(angle) * spd;
+                            let nx = vx / spd;
+                            let ny = vy / spd;
+                            bossBullets.push({ x: bx + nx * 30, y: by + ny * 30, radius: player.width / 12, vx: vx, vy: vy });
+                            bossBullets.push({ x: bx + nx * 60, y: by + ny * 60, radius: player.width / 12, vx: vx, vy: vy });
+                            bossBullets.push({ x: bx + nx * 90, y: by + ny * 90, radius: player.width / 12, vx: vx, vy: vy });
+                        }
+                        o.lastAttackTime = now;
+                    }
+                }
+            }
+        }
         if ((o.type === "boss" || o.type === "boss5") && o.rect.y > 0 && o.type !== "boss5") {
             if (now - o.lastAttackTime >= 1000) {
                 bossBullets.push({
@@ -832,9 +1324,6 @@ function gameLoop(currentTime) {
     checkGameOver();
     checkBossBulletCollision();
 
-    // 移除出界陨石
-    obstacles = obstacles.filter(o => o.rect.y < HEIGHT);
-
     lasers();
 
     // 粒子
@@ -851,8 +1340,10 @@ function gameLoop(currentTime) {
 
     drawObstacles();
 
-    // 绘制玩家飞机（使用贴图）
-    ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+    // 绘制玩家飞机（使用贴图，无敌时闪烁）
+    if (!invincible || Math.floor(Date.now() / 100) % 2 === 0) {
+        ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+    }
 
     // 暴走模式光波
     if (rage_mode) {
@@ -904,9 +1395,27 @@ function gameLoop(currentTime) {
     ctx.font = "36px Arial";
     ctx.fillText(`分数: ${score}`, 10, 40);
 
+    // Boss6警告文字
+    if (boss6Phase === "warning") {
+        ctx.fillStyle = "rgb(255,0,0)";
+        ctx.font = "48px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+        ctx.textAlign = "left";
+    }
+
+    // Boss7警告文字
+    if (boss7Phase === "warning") {
+        ctx.fillStyle = "rgb(255,0,0)";
+        ctx.font = "48px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+        ctx.textAlign = "left";
+    }
+
     document.getElementById("scoreValue").textContent = score;
 
-    requestAnimationFrame(gameLoop);
+    animationId = requestAnimationFrame(gameLoop);
 }
 
 // ==================== 重新开始 ====================
@@ -922,18 +1431,32 @@ document.getElementById("restartBtn").addEventListener("click", () => {
     powerup_count = 0;
     rage_mode = false;
     rage_end_time = 0;
+    boss6Phase = "none";
+    boss6Triggered = false;
+    boss7Phase = "none";
+    boss7Triggered = false;
+    gameStartTime = Date.now();
+    window.lastTime = 0;
+    gameStarted = true;
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
 
     player.x = WIDTH / 2;
     player.y = HEIGHT - 100;
 
     running = true;
     document.getElementById("gameOver").classList.add("hidden");
+    if (animationId) cancelAnimationFrame(animationId);
+    animationId = requestAnimationFrame(gameLoop);
 });
 
 // ==================== 启动 ====================
 // 初始不自动启动，等待开始按钮
 let gameStarted = false;
+let gameStartTime = 0; // 游戏开始时间，用于计算游戏内秒数
 let controlMode = "keyboard"; // 控制模式: keyboard / mouse
+let gameMode = "endless"; // 游戏模式: endless / boss
 let mouseX = WIDTH / 2;
 let mouseY = HEIGHT / 2;
 
@@ -950,7 +1473,9 @@ document.getElementById("startBtn").addEventListener("click", () => {
         // 移动端直接开始游戏
         if (!gameStarted) {
             gameStarted = true;
-            requestAnimationFrame(gameLoop);
+            gameStartTime = Date.now();
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(gameLoop);
         }
     } else {
         // PC端显示控制选择界面
@@ -962,19 +1487,83 @@ document.getElementById("startBtn").addEventListener("click", () => {
 document.getElementById("keyboardOption").addEventListener("click", () => {
     controlMode = "keyboard";
     document.getElementById("controlScreen").classList.add("hidden");
-    if (!gameStarted) {
-        gameStarted = true;
-        requestAnimationFrame(gameLoop);
-    }
+    document.getElementById("modeScreen").classList.remove("hidden");
 });
 
 document.getElementById("mouseOption").addEventListener("click", () => {
     controlMode = "mouse";
     document.getElementById("controlScreen").classList.add("hidden");
+    document.getElementById("modeScreen").classList.remove("hidden");
+});
+
+// ==================== 游戏模式选择 ====================
+document.getElementById("endlessOption").addEventListener("click", () => {
+    gameMode = "endless";
+    document.getElementById("modeScreen").classList.add("hidden");
     if (!gameStarted) {
         gameStarted = true;
-        requestAnimationFrame(gameLoop);
+        gameStartTime = Date.now();
+        running = true;
+        if (animationId) cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(gameLoop);
     }
+});
+
+document.getElementById("bossOption").addEventListener("click", () => {
+    gameMode = "boss";
+    document.getElementById("modeScreen").classList.add("hidden");
+    document.getElementById("bossSelectScreen").classList.remove("hidden");
+});
+
+document.getElementById("boss1Btn").addEventListener("click", () => {
+    document.getElementById("bossSelectScreen").classList.add("hidden");
+    startBoss1Game();
+});
+
+document.getElementById("boss2Btn").addEventListener("click", () => {
+    document.getElementById("bossSelectScreen").classList.add("hidden");
+    startBoss2Game();
+});
+
+document.getElementById("backToModeFromBossBtn").addEventListener("click", () => {
+    document.getElementById("bossSelectScreen").classList.add("hidden");
+    document.getElementById("modeScreen").classList.remove("hidden");
+});
+
+document.getElementById("backToControlBtn").addEventListener("click", () => {
+    document.getElementById("modeScreen").classList.add("hidden");
+    document.getElementById("controlScreen").classList.remove("hidden");
+});
+
+document.getElementById("backToModeBtn").addEventListener("click", () => {
+    document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("modeScreen").classList.remove("hidden");
+    // 重置游戏状态
+    obstacles = [];
+    powerups = [];
+    particles = [];
+    bossBullets = [];
+    score = 0;
+    last_gold_trigger_time = -1;
+    laser_count = 3;
+    laser_color_mode = 0;
+    powerup_count = 0;
+    rage_mode = false;
+    rage_end_time = 0;
+    boss6Phase = "none";
+    boss6Triggered = false;
+    boss7Phase = "none";
+    boss7Triggered = false;
+    gameStarted = false;
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
+    player.x = WIDTH / 2;
+    player.y = HEIGHT - 100;
+    running = false;
+    // 清空画布
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 });
 
 // ==================== 鼠标移动跟踪 ====================
@@ -984,4 +1573,621 @@ canvas.addEventListener("mousemove", e => {
     const scaleY = canvas.height / rect.height;
     mouseX = (e.clientX - rect.left) * scaleX;
     mouseY = (e.clientY - rect.top) * scaleY;
+});
+
+// ==================== Boss1模式 - 熔岩飞轮 (Boss7) ====================
+let boss1Running = false;
+let boss1AnimationId = null;
+
+function startBoss1Game() {
+    console.log("startBoss1Game 被调用!");
+    // 重置状态
+    obstacles = [];
+    bossBullets = [];
+    particles = [];
+    score = 0;
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
+    player.x = WIDTH / 2;
+    player.y = HEIGHT - 100;
+    boss7Phase = "none";
+    boss7Triggered = false;
+    boss7RotateAngle = 0;
+    boss1Running = true;
+    window.lastBoss1LogTime = 0;
+    window.boss1PlayerHP = 1; // 吃到1个子弹就失败
+
+    let boss7StartTime = Date.now();
+
+    function boss1Loop() {
+        if (!boss1Running) return;
+
+        let now = Date.now();
+        let dt = 1 / 60;
+
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        updatePlayer();
+
+        // Debug: 每秒打印一次状态
+        if (!window.lastBoss1LogTime || now - window.lastBoss1LogTime > 5000) {
+            let boss7 = obstacles.find(o => o.type === "boss7");
+            console.log("Boss1Loop状态 - boss7Phase:" + boss7Phase + " bossHP:" + (boss7?.hp || "N/A") + " playerHP:" + (window.boss1PlayerHP || 3));
+            window.lastBoss1LogTime = now;
+        }
+
+        // Boss7触发
+        if (boss7Phase === "none" && now - boss7StartTime >= 2000) {
+            boss7Triggered = true;
+            boss7Phase = "warning";
+            boss7StartTime = now;
+        }
+
+        // Boss7阶段处理
+        if (boss7Phase === "warning") {
+            if (now - boss7StartTime >= 1000) {
+                boss7Phase = "waiting_after_warning";
+                boss7StartTime = now;
+            }
+        } else if (boss7Phase === "waiting_after_warning") {
+            if (now - boss7StartTime >= 1000) {
+                boss7Phase = "appearing";
+                boss7StartTime = now;
+                let rect = { x: (WIDTH - 294) / 2, y: -294, width: 294, height: 294 };
+                obstacles.push({ rect, hp: 8000, type: "boss7", lastAttackTime: 0 });
+            }
+        } else if (boss7Phase === "appearing") {
+            let boss7 = obstacles.find(o => o.type === "boss7");
+            if (boss7 && boss7.rect.y < 210) {
+                boss7.rect.y += 4;
+            } else if (boss7) {
+                boss7.rect.y = 210;
+                boss7Phase = "active";
+            }
+        }
+
+        // Boss7攻击 - 按用户要求实现
+        for (let o of obstacles) {
+            if (o.type === "boss7" && boss7Phase === "active" && o.rect.y >= 0) {
+                // 初始化Boss7状态
+                if (o.boss7State === undefined) {
+                    o.boss7State = 1; // 1=第一阶段, 2=过渡期, 3=第二阶段
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    o.moveStartTime = 0;
+                    o.targetX = o.rect.x;
+                    o.startX = o.rect.x;
+                    o.lastAttackTime = 0;
+                    o.boss7RotateAngle = 0;
+                }
+
+                let hpMax = 8000;
+
+                // 第一阶段：血量>50%
+                if (o.boss7State === 1 && o.hp <= hpMax / 2) {
+                    o.boss7State = 2; // 过渡阶段
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    continue;
+                }
+
+                // 过渡阶段：休息1秒后进入第二阶段
+                if (o.boss7State === 2) {
+                    if (now - o.stayStartTime >= 1000) {
+                        o.boss7State = 3; // 第二阶段
+                        o.boss7RotateAngle = 0;
+                        o.stayStartTime = now;
+                        o.isMoving = false;
+                    }
+                    continue; // 过渡阶段不攻击也不移动
+                }
+
+                // 移动逻辑：停留2秒，移动0.5秒(50-100像素)
+                if (!o.isMoving) {
+                    // 静止状态，2秒后开始移动
+                    if (now - o.stayStartTime >= 2000) {
+                        let moveDistance = 50 + Math.random() * 50;
+                        let direction = Math.random() < 0.5 ? -1 : 1;
+                        let newX = o.rect.x + direction * moveDistance;
+                        newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                        o.targetX = newX;
+                        o.startX = o.rect.x;
+                        o.isMoving = true;
+                        o.moveStartTime = now;
+                    }
+                } else {
+                    // 移动状态，0.5秒内匀速移动
+                    let elapsed = now - o.moveStartTime;
+                    if (elapsed >= 500) {
+                        o.rect.x = o.targetX;
+                        o.isMoving = false;
+                        o.stayStartTime = now;
+                    } else {
+                        let progress = elapsed / 500;
+                        o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                    }
+                }
+
+                // 攻击逻辑：静止时攻击，移动时不攻击
+                if (!o.isMoving) {
+                    // 第一阶段：12个方向固定发射子弹，间隔30像素，速度6
+                    if (o.boss7State === 1) {
+                        if (now - o.lastAttackTime >= 100) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let spd = 6;
+                            let dirs = [
+                                { vx: spd * 0.866, vy: -spd * 0.5 },   // -30°
+                                { vx: spd * 0.5, vy: -spd * 0.866 },   // -60°
+                                { vx: 0, vy: -spd },                    // -90°
+                                { vx: -spd * 0.5, vy: -spd * 0.866 },  // -120°
+                                { vx: -spd * 0.866, vy: -spd * 0.5 },  // -150°
+                                { vx: spd * 0.866, vy: spd * 0.5 },    // 30°
+                                { vx: spd * 0.5, vy: spd * 0.866 },    // 60°
+                                { vx: 0, vy: spd },                     // 90°
+                                { vx: -spd * 0.5, vy: spd * 0.866 },   // 120°
+                                { vx: -spd * 0.866, vy: spd * 0.5 },   // 150°
+                                { vx: -spd, vy: 0 },                    // 180°
+                                { vx: spd, vy: 0 }                     // -180°
+                            ];
+                            for (let d of dirs) {
+                                let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                                let nx = d.vx / len;
+                                let ny = d.vy / len;
+                                bossBullets.push({ x: bx + nx * 30, y: by + ny * 30, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                                bossBullets.push({ x: bx + nx * 60, y: by + ny * 60, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                                bossBullets.push({ x: bx + nx * 90, y: by + ny * 90, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                            }
+                            o.lastAttackTime = now;
+                        }
+                    }
+                    // 第二阶段：12个方向旋转发射子弹，间隔30像素，速度6
+                    else if (o.boss7State === 3) {
+                        if (now - o.lastAttackTime >= 100) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let spd = 6;
+                            let baseAngles = [
+                                -Math.PI / 6, -Math.PI / 3, -Math.PI / 2, -2 * Math.PI / 3, -5 * Math.PI / 6,
+                                Math.PI / 6, Math.PI / 3, Math.PI / 2, 2 * Math.PI / 3, 5 * Math.PI / 6,
+                                Math.PI, -Math.PI
+                            ];
+                            o.boss7RotateAngle += 0.05;
+                            for (let baseAngle of baseAngles) {
+                                let angle = baseAngle + o.boss7RotateAngle;
+                                let vx = Math.cos(angle) * spd;
+                                let vy = Math.sin(angle) * spd;
+                                let nx = vx / spd;
+                                let ny = vy / spd;
+                                bossBullets.push({ x: bx + nx * 30, y: by + ny * 30, radius: player.width / 12, vx: vx, vy: vy });
+                                bossBullets.push({ x: bx + nx * 60, y: by + ny * 60, radius: player.width / 12, vx: vx, vy: vy });
+                                bossBullets.push({ x: bx + nx * 90, y: by + ny * 90, radius: player.width / 12, vx: vx, vy: vy });
+                            }
+                            o.lastAttackTime = now;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 更新子弹
+        for (let b of bossBullets) {
+            if (b.vx !== undefined && b.vy !== undefined) {
+                b.x += b.vx;
+                b.y += b.vy;
+            } else {
+                b.y += b.speed;
+            }
+        }
+        bossBullets = bossBullets.filter(b => b.y < HEIGHT && b.y > -50 && b.x > -50 && b.x < WIDTH + 50);
+
+        // Boss1模式子弹碰撞检测
+        for (let i = bossBullets.length - 1; i >= 0; i--) {
+            let b = bossBullets[i];
+            let dx = b.x - player.centerx();
+            let dy = b.y - player.centery();
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < b.radius + player.width / 4) { // 缩小碰撞半径，更容易躲避
+                if (shield_hits > 0) {
+                    shield_hits--;
+                    bossBullets.splice(i, 1);
+                } else {
+                    window.boss1PlayerHP--;
+                    bossBullets.splice(i, 1);
+                    if (window.boss1PlayerHP <= 0) {
+                        boss1Running = false;
+                        document.getElementById("bossGameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+            }
+        }
+        lasers();
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+        particles.forEach(p => p.draw());
+
+        // 检查碰撞 - 玩家与Boss7的身体碰撞(不应该导致游戏结束，只扣血)
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let o = obstacles[i];
+            if (o.type === "boss7" && boss7Phase === "active" && o.rect.y >= 0) {
+                let dx = player.centerx() - (o.rect.x + o.rect.width / 2);
+                let dy = player.centery() - (o.rect.y + o.rect.height / 2);
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.width / 2 + o.rect.width / 2) {
+                    // 玩家碰到Boss身体，弹开并扣血
+                    window.boss1PlayerHP--;
+                    // 将玩家移开
+                    player.y = o.rect.y + o.rect.height + 10;
+                    if (window.boss1PlayerHP <= 0) {
+                        boss1Running = false;
+                        boss7Phase = "defeated";
+                        document.getElementById("bossGameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+                if (o.hp <= 0) {
+                    boss1Running = false;
+                    boss7Phase = "defeated";
+                    document.getElementById("bossGameOver").classList.remove("hidden");
+                    return;
+                }
+            }
+        }
+
+        drawObstacles();
+        // 绘制玩家飞机（先绘制，这样不会被Boss子弹遮挡）
+        ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+        // 绘制Boss子弹（在玩家飞机之后，这样子弹显示在飞机上层，不会被飞机图片遮挡）
+        for (let b of bossBullets) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+            ctx.fill();
+        }
+        // 绘制Boss来袭文字（在最上层，不会被遮挡）
+        if (boss7Phase === "warning") {
+            ctx.fillStyle = "rgb(255,0,0)";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+            ctx.textAlign = "left";
+        }
+
+        boss1AnimationId = requestAnimationFrame(boss1Loop);
+    }
+
+    boss1Loop();
+}
+
+document.getElementById("boss1RestartBtn").addEventListener("click", () => {
+    document.getElementById("bossGameOver").classList.add("hidden");
+    startBoss1Game();
+});
+
+document.getElementById("boss1BackBtn").addEventListener("click", () => {
+    boss1Running = false;
+    if (boss1AnimationId) cancelAnimationFrame(boss1AnimationId);
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("bossSelectScreen").classList.remove("hidden");
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+});
+
+// ==================== Boss2模式 - 超时空战神 (Boss6) ====================
+let boss2Running = false;
+let boss2AnimationId = null;
+
+function startBoss2Game() {
+    // 重置状态
+    obstacles = [];
+    bossBullets = [];
+    particles = [];
+    score = 0;
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
+    player.x = WIDTH / 2;
+    player.y = HEIGHT - 100;
+    boss6Phase = "none";
+    boss6Triggered = false;
+    boss2Running = true;
+    window.boss2PlayerHP = 1; // 吃到1个子弹就失败
+    window.lastBoss2LogTime = 0;
+
+    let boss6StartTime = Date.now();
+
+    function boss2Loop() {
+        if (!boss2Running) return;
+
+        let now = Date.now();
+        let dt = 1 / 60;
+
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        updatePlayer();
+
+        // 无敌时间检查
+        if (invincible && Date.now() > invincibleEndTime) {
+            invincible = false;
+        }
+
+        // Debug: 每秒打印状态
+        if (!window.lastBoss2LogTime || now - window.lastBoss2LogTime > 2000) {
+            let boss6 = obstacles.find(o => o.type === "boss6");
+            console.log("Boss6状态 - phase:" + boss6Phase + " HP:" + (boss6?.hp || "N/A") + " playerHP:" + window.boss2PlayerHP + " bulletCount:" + bossBullets.length + " shield:" + shield_hits);
+            window.lastBoss2LogTime = now;
+        }
+
+        // Boss6触发
+        if (boss6Phase === "none" && now - boss6StartTime >= 2000) {
+            boss6Triggered = true;
+            boss6Phase = "warning";
+            boss6StartTime = now;
+        }
+
+        // Boss6阶段处理
+        if (boss6Phase === "warning") {
+            if (now - boss6StartTime >= 1000) {
+                boss6Phase = "waiting_after_warning";
+                boss6StartTime = now;
+            }
+        } else if (boss6Phase === "waiting_after_warning") {
+            if (now - boss6StartTime >= 1000) {
+                boss6Phase = "appearing";
+                boss6StartTime = now;
+                let rect = { x: (WIDTH - 294) / 2, y: -294, width: 294, height: 294 };
+                obstacles.push({ rect, hp: 10000, type: "boss6", lastAttackTime: 0 });
+            }
+        } else if (boss6Phase === "appearing") {
+            let boss6 = obstacles.find(o => o.type === "boss6");
+            if (boss6 && boss6.rect.y < 60) {
+                boss6.rect.y += 4;
+            } else if (boss6) {
+                boss6.rect.y = 60;
+                boss6Phase = "active";
+            }
+        }
+
+        // Boss6攻击
+        for (let o of obstacles) {
+            if (o.type === "boss6" && boss6Phase === "active" && o.rect.y >= 0) {
+                if (o.isMoving === undefined) {
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    o.moveStartTime = 0;
+                    o.targetX = o.rect.x;
+                    o.startX = o.rect.x;
+                    o.boss6Phase = 1;
+                    o.phaseTransitionTime = 0;
+                    o.lastAttackTime = 0;
+                    o.boss6SingleShotTime = 0;
+                }
+                let hpMax = 10000;
+                if (o.boss6Phase === 1 && o.hp <= hpMax / 2) {
+                    o.boss6Phase = 3;
+                    o.phaseTransitionTime = now;
+                }
+                if (o.boss6Phase === 3) {
+                    if (now - o.phaseTransitionTime >= 1000) {
+                        o.boss6Phase = 2;
+                        o.stayStartTime = now;
+                        o.isMoving = false;
+                    }
+                    continue;
+                }
+                if (!o.isMoving) {
+                    if (now - o.stayStartTime >= 5000) {
+                        let moveDistance = 50 + Math.random() * 50;
+                        let direction = Math.random() < 0.5 ? -1 : 1;
+                        let newX = o.rect.x + direction * moveDistance;
+                        newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                        o.targetX = newX;
+                        o.startX = o.rect.x;
+                        o.isMoving = true;
+                        o.moveStartTime = now;
+                    }
+                } else {
+                    let elapsed = now - o.moveStartTime;
+                    if (elapsed >= 500) {
+                        o.rect.x = o.targetX;
+                        o.isMoving = false;
+                        o.stayStartTime = now;
+                    } else {
+                        let progress = elapsed / 500;
+                        o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                    }
+                }
+                if (!o.isMoving) {
+                    if (o.boss6Phase === 1) {
+                        if (now - o.lastAttackTime >= 1000) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let spd = 6;
+                            let dirs = [
+                                { vx: spd * 0.866, vy: spd * 0.5 },
+                                { vx: spd * 0.5, vy: spd * 0.866 },
+                                { vx: 0, vy: spd },
+                                { vx: -spd * 0.5, vy: spd * 0.866 },
+                                { vx: -spd * 0.866, vy: spd * 0.5 }
+                            ];
+                            for (let d of dirs) {
+                                let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                                let nx = d.vx / len;
+                                let ny = d.vy / len;
+                                for (let j = 0; j < 3; j++) {
+                                    let offset = j * 30;
+                                    bossBullets.push({ x: bx + nx * offset, y: by + ny * offset, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                                }
+                            }
+                            o.lastAttackTime = now;
+                        }
+                        if (now - o.boss6SingleShotTime >= 500) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let dx = player.centerx() - bx;
+                            let dy = player.centery() - by;
+                            let dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist > 0) {
+                                bossBullets.push({ x: bx, y: by, radius: player.width / 12, vx: (dx / dist) * 1, vy: (dy / dist) * 1 });
+                            }
+                            o.boss6SingleShotTime = now;
+                        }
+                    } else if (o.boss6Phase === 2) {
+                        if (now - o.lastAttackTime >= 1000) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let spd = 8;
+                            let dirs = [
+                                { vx: spd * 0.966, vy: spd * 0.259 },
+                                { vx: spd * 0.866, vy: spd * 0.5 },
+                                { vx: spd * 0.707, vy: spd * 0.707 },
+                                { vx: spd * 0.5, vy: spd * 0.866 },
+                                { vx: spd * 0.259, vy: spd * 0.966 },
+                                { vx: 0, vy: spd },
+                                { vx: -spd * 0.259, vy: spd * 0.966 },
+                                { vx: -spd * 0.5, vy: spd * 0.866 },
+                                { vx: -spd * 0.707, vy: spd * 0.707 },
+                                { vx: -spd * 0.866, vy: spd * 0.5 }
+                            ];
+                            for (let d of dirs) {
+                                let len = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
+                                let nx = d.vx / len;
+                                let ny = d.vy / len;
+                                for (let j = 0; j < 6; j++) {
+                                    let offset = j * 30;
+                                    bossBullets.push({ x: bx + nx * offset, y: by + ny * offset, radius: player.width / 12, vx: d.vx, vy: d.vy });
+                                }
+                            }
+                            o.lastAttackTime = now;
+                        }
+                        if (now - o.boss6SingleShotTime >= 500) {
+                            let bx = o.rect.x + o.rect.width / 2;
+                            let by = o.rect.y + o.rect.height / 2;
+                            let dx = player.centerx() - bx;
+                            let dy = player.centery() - by;
+                            let dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist > 0) {
+                                bossBullets.push({ x: bx, y: by, radius: player.width / 12, vx: (dx / dist) * 2, vy: (dy / dist) * 2 });
+                            }
+                            o.boss6SingleShotTime = now;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 更新子弹
+        for (let b of bossBullets) {
+            if (b.vx !== undefined && b.vy !== undefined) {
+                b.x += b.vx;
+                b.y += b.vy;
+            } else {
+                b.y += b.speed;
+            }
+        }
+        bossBullets = bossBullets.filter(b => b.y < HEIGHT && b.y > -50 && b.x > -50 && b.x < WIDTH + 50);
+
+        // Boss2模式子弹碰撞检测
+        for (let i = bossBullets.length - 1; i >= 0; i--) {
+            let b = bossBullets[i];
+            let dx = b.x - player.centerx();
+            let dy = b.y - player.centery();
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let collisionThreshold = b.radius + player.width / 4;
+            if (dist < collisionThreshold) {
+                console.log("Boss6子弹碰撞! dist:" + dist.toFixed(1) + " threshold:" + collisionThreshold.toFixed(1) + " shield_hits:" + shield_hits + " HP:" + window.boss2PlayerHP);
+                if (shield_hits > 0) {
+                    shield_hits--;
+                    bossBullets.splice(i, 1);
+                } else {
+                    window.boss2PlayerHP--;
+                    bossBullets.splice(i, 1);
+                    console.log("扣血后HP:" + window.boss2PlayerHP);
+                    if (window.boss2PlayerHP <= 0) {
+                        boss2Running = false;
+                        document.getElementById("boss2GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+            }
+        }
+        lasers();
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+        particles.forEach(p => p.draw());
+
+        // 检查碰撞 - 玩家与Boss6的身体碰撞
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let o = obstacles[i];
+            if (o.type === "boss6" && boss6Phase === "active" && o.rect.y >= 0) {
+                let dx = player.centerx() - (o.rect.x + o.rect.width / 2);
+                let dy = player.centery() - (o.rect.y + o.rect.height / 2);
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.width / 2 + o.rect.width / 2) {
+                    // 玩家碰到Boss身体，弹开并扣血
+                    window.boss2PlayerHP--;
+                    player.y = o.rect.y + o.rect.height + 10;
+                    if (window.boss2PlayerHP <= 0) {
+                        boss2Running = false;
+                        boss6Phase = "defeated";
+                        document.getElementById("boss2GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+                if (o.hp <= 0) {
+                    boss2Running = false;
+                    boss6Phase = "defeated";
+                    document.getElementById("boss2GameOver").classList.remove("hidden");
+                    return;
+                }
+            }
+        }
+
+        drawObstacles();
+        // 绘制玩家飞机（先绘制，这样不会被Boss子弹遮挡）
+        if (!invincible || Math.floor(Date.now() / 100) % 2 === 0) {
+            ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+        }
+        // 绘制Boss子弹（在玩家飞机之后，这样子弹显示在飞机上层，不会被飞机图片遮挡）
+        for (let b of bossBullets) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+            ctx.fill();
+        }
+        // 绘制Boss来袭文字（在最上层，不会被遮挡）
+        if (boss6Phase === "warning") {
+            ctx.fillStyle = "rgb(255,0,0)";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+            ctx.textAlign = "left";
+        }
+
+        boss2AnimationId = requestAnimationFrame(boss2Loop);
+    }
+
+    boss2Loop();
+}
+
+document.getElementById("boss2RestartBtn").addEventListener("click", () => {
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    startBoss2Game();
+});
+
+document.getElementById("boss2BackBtn").addEventListener("click", () => {
+    boss2Running = false;
+    if (boss2AnimationId) cancelAnimationFrame(boss2AnimationId);
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("bossSelectScreen").classList.remove("hidden");
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 });
