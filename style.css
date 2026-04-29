@@ -165,7 +165,9 @@ body {
 }
 
 #bossGameOver,
-#boss2GameOver {
+#boss2GameOver,
+#boss3GameOver,
+#boss4GameOver {
     position: absolute;
     top: 0;
     left: 0;
@@ -182,7 +184,9 @@ body {
 }
 
 #bossGameOver.hidden,
-#boss2GameOver.hidden {
+#boss2GameOver.hidden,
+#boss3GameOver.hidden,
+#boss4GameOver.hidden {
     display: none;
 }
 
@@ -339,7 +343,8 @@ body {
 }
 
 #boss1RestartBtn,
-#boss2RestartBtn {
+#boss2RestartBtn,
+#boss3RestartBtn {
     background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
     color: #fff;
     border: none;
@@ -353,7 +358,8 @@ body {
 }
 
 #boss1RestartBtn:hover,
-#boss2RestartBtn:hover {
+#boss2RestartBtn:hover,
+#boss3RestartBtn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }

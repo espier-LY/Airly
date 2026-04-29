@@ -46,6 +46,12 @@ boss6Img.src = "assets/4.1.1.png";
 const boss7Img = new Image();
 boss7Img.src = "assets/3.1.1.png";
 
+const boss8Img = new Image();
+boss8Img.src = "assets/5.1.1.jpg";
+
+const boss9Img = new Image();
+boss9Img.src = "assets/6.1.1.png";
+
 // ==================== 游戏状态 ====================
 let obstacles = [];
 let powerups = [];
@@ -73,6 +79,14 @@ let boss6Triggered = false; // 防止重复触发
 let boss7Phase = "none";
 let boss7StartTime = 0;
 let boss7Triggered = false;
+
+let boss8Phase = "none";
+let boss8StartTime = 0;
+let boss8Triggered = false;
+
+let boss9Phase = "none";
+let boss9StartTime = 0;
+let boss9Triggered = false;
 
 let running = true;
 let animationId = null;
@@ -613,6 +627,8 @@ function lasers() {
                 addScore = 500;
             } else if (o.type === "boss7") {
                 addScore = 500;
+            } else if (o.type === "boss8" || o.type === "boss9") {
+                addScore = 500;
             } else {
                 addScore = 10;
             }
@@ -651,6 +667,20 @@ function lasers() {
             if (o.type === "boss7") {
                 boss7Phase = "defeated";
                 boss7StartTime = Date.now();
+            }
+
+            // Boss8被击败
+            if (o.type === "boss8") {
+                boss8Phase = "defeated";
+                boss8StartTime = Date.now();
+                boss3Running = false;
+            }
+
+            // Boss9被击败
+            if (o.type === "boss9") {
+                boss9Phase = "defeated";
+                boss9StartTime = Date.now();
+                boss4Running = false;
             }
 
             obstacles.splice(i, 1);
@@ -710,6 +740,8 @@ function drawObstacles() {
         else if (o.type === "boss5") img = boss5Img;
         else if (o.type === "boss6") img = boss6Img;
         else if (o.type === "boss7") img = boss7Img;
+        else if (o.type === "boss8") img = boss8Img;
+        else if (o.type === "boss9") img = boss9Img;
         else img = meteoriteImg;
 
         ctx.drawImage(img, o.rect.x, o.rect.y, o.rect.width, o.rect.height);
@@ -721,9 +753,11 @@ function drawObstacles() {
         if (o.type === "boss") hp_max = 180;
         if (o.type === "boss6") hp_max = 10000;
         if (o.type === "boss7") hp_max = 8000;
+        if (o.type === "boss8") hp_max = 12000;
+        if (o.type === "boss9") hp_max = 12000;
 
-        // boss6和boss7在完全出现后才显示血条
-        if ((o.type === "boss6" || o.type === "boss7") && o.rect.y < 0) continue;
+        // boss6、boss7、boss8、boss9在完全出现后才显示血条
+        if ((o.type === "boss6" || o.type === "boss7" || o.type === "boss8" || o.type === "boss9") && o.rect.y < 0) continue;
 
         let hp_ratio = Math.min(Math.max(o.hp / hp_max, 0), 1);
 
@@ -787,8 +821,8 @@ function checkGameOver() {
             let dy = oy - player.centery();
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < rageRadius + o.rect.width / 2) {
-                // 暴走碰撞击落获得分数（boss6、boss7除外）
-                if (o.type === "boss6" || o.type === "boss7") continue;
+                // 暴走碰撞击落获得分数（boss6、boss7、boss8、boss9除外）
+                if (o.type === "boss6" || o.type === "boss7" || o.type === "boss8" || o.type === "boss9") continue;
 
                 let addScore = 10;
                 if (o.type === "gold") addScore = 20;
@@ -808,7 +842,7 @@ function checkGameOver() {
             height: player.height
         })) {
             if (shield_hits > 0) {
-                if (o.type === "boss6" || o.type === "boss7") {
+                if (o.type === "boss6" || o.type === "boss7" || o.type === "boss8" || o.type === "boss9") {
                     shield_hits--;
                     invincible = true;
                     invincibleEndTime = Date.now() + 1000;
@@ -870,10 +904,12 @@ function gameLoop(currentTime) {
     updatePlayer();
     spawn();
 
-    // 更新陨石位置（boss6、boss7固定在顶端不移动）
+    // 更新陨石位置（boss6、boss7、boss8、boss9固定在顶端不移动）
     for (let o of obstacles) {
         if (o.type === "boss6" && boss6Phase === "active") continue;
         if (o.type === "boss7" && boss7Phase === "active") continue;
+        if (o.type === "boss8" && boss8Phase === "active") continue;
+        if (o.type === "boss9" && boss9Phase === "active") continue;
         o.rect.y += 4 * dt;
     }
 
@@ -1525,6 +1561,16 @@ document.getElementById("boss2Btn").addEventListener("click", () => {
     startBoss2Game();
 });
 
+document.getElementById("boss3Btn").addEventListener("click", () => {
+    document.getElementById("bossSelectScreen").classList.add("hidden");
+    startBoss3Game();
+});
+
+document.getElementById("boss4Btn").addEventListener("click", () => {
+    document.getElementById("bossSelectScreen").classList.add("hidden");
+    startBoss4Game();
+});
+
 document.getElementById("backToModeFromBossBtn").addEventListener("click", () => {
     document.getElementById("bossSelectScreen").classList.add("hidden");
     document.getElementById("modeScreen").classList.remove("hidden");
@@ -1537,6 +1583,10 @@ document.getElementById("backToControlBtn").addEventListener("click", () => {
 
 document.getElementById("backToModeBtn").addEventListener("click", () => {
     document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     document.getElementById("modeScreen").classList.remove("hidden");
     // 重置游戏状态
     obstacles = [];
@@ -1551,9 +1601,11 @@ document.getElementById("backToModeBtn").addEventListener("click", () => {
     rage_mode = false;
     rage_end_time = 0;
     boss6Phase = "none";
+    boss8Phase = "none";
+    boss9Phase = "none";
     boss6Triggered = false;
-    boss7Phase = "none";
     boss7Triggered = false;
+    boss9Triggered = false;
     gameStarted = false;
     shield_hits = 0;
     invincible = false;
@@ -1581,6 +1633,7 @@ let boss1AnimationId = null;
 
 function startBoss1Game() {
     console.log("startBoss1Game 被调用!");
+    running = false; // 停止无尽模式
     // 重置状态
     obstacles = [];
     bossBullets = [];
@@ -1866,6 +1919,9 @@ function startBoss1Game() {
 
 document.getElementById("boss1RestartBtn").addEventListener("click", () => {
     document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     startBoss1Game();
 });
 
@@ -1873,6 +1929,9 @@ document.getElementById("boss1BackBtn").addEventListener("click", () => {
     boss1Running = false;
     if (boss1AnimationId) cancelAnimationFrame(boss1AnimationId);
     document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     document.getElementById("bossSelectScreen").classList.remove("hidden");
     ctx.fillStyle = "rgb(0, 0, 0)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -1883,6 +1942,7 @@ let boss2Running = false;
 let boss2AnimationId = null;
 
 function startBoss2Game() {
+    running = false;
     // 重置状态
     obstacles = [];
     bossBullets = [];
@@ -2178,15 +2238,868 @@ function startBoss2Game() {
     boss2Loop();
 }
 
+// ==================== Boss3模式 - 荷鲁斯之眼 (Boss8) ====================
+let boss3Running = false;
+let boss3AnimationId = null;
+
+// ==================== Boss4模式 - Boss9 ====================
+let boss4Running = false;
+let boss4AnimationId = null;
+
+function startBoss3Game() {
+    running = false;
+    // 重置状态
+    obstacles = [];
+    bossBullets = [];
+    particles = [];
+    score = 0;
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
+    player.x = WIDTH / 2;
+    player.y = HEIGHT - 100;
+    boss8Phase = "none";
+    boss8Triggered = false;
+    boss8StartTime = Date.now();
+    boss3Running = true;
+    window.boss3PlayerHP = 1;
+    window.lastBoss3LogTime = 0;
+
+    function boss3Loop() {
+        if (!boss3Running) return;
+
+        let now = Date.now();
+        let dt = 1 / 60;
+
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        updatePlayer();
+
+        // 无敌时间检查
+        if (invincible && Date.now() > invincibleEndTime) {
+            invincible = false;
+        }
+
+        // Debug: 每秒打印状态
+        if (!window.lastBoss3LogTime || now - window.lastBoss3LogTime > 2000) {
+            let boss8 = obstacles.find(o => o.type === "boss8");
+            console.log("Boss8状态 - phase:" + boss8Phase + " HP:" + (boss8?.hp || "N/A") + " playerHP:" + window.boss3PlayerHP + " bulletCount:" + bossBullets.length + " shield:" + shield_hits);
+            window.lastBoss3LogTime = now;
+        }
+
+        // Boss8触发
+        if (boss8Phase === "none" && now - boss8StartTime >= 2000) {
+            boss8Triggered = true;
+            boss8Phase = "warning";
+            boss8StartTime = now;
+        }
+
+        // Boss8阶段处理
+        if (boss8Phase === "warning") {
+            if (now - boss8StartTime >= 1000) {
+                boss8Phase = "waiting_after_warning";
+                boss8StartTime = now;
+            }
+        } else if (boss8Phase === "waiting_after_warning") {
+            if (now - boss8StartTime >= 1000) {
+                boss8Phase = "appearing";
+                boss8StartTime = now;
+                let rect = { x: (WIDTH - 294) / 2, y: -294, width: 294, height: 294 };
+                obstacles.push({ rect, hp: 12000, type: "boss8", lastAttackTime: 0 });
+            }
+        } else if (boss8Phase === "appearing") {
+            let boss8 = obstacles.find(o => o.type === "boss8");
+            if (boss8 && boss8.rect.y < 253) {
+                boss8.rect.y += 4;
+            } else if (boss8) {
+                boss8.rect.y = 253;
+                boss8Phase = "active";
+            }
+        }
+
+        // Boss8攻击
+        for (let o of obstacles) {
+            if (o.type === "boss8" && boss8Phase === "active" && o.rect.y >= 0) {
+                if (o.isMoving === undefined) {
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    o.moveStartTime = 0;
+                    o.targetX = o.rect.x;
+                    o.startX = o.rect.x;
+                    o.boss8Phase = 1;
+                    o.phaseTransitionTime = 0;
+                    o.lastSpikeTime = 0;
+                    o.lastTrackTime = 0;
+                    o.spikeDirUp = true;
+                    o.moveCount = 0;
+                }
+                let hpMax = 12000;
+                if (o.boss8Phase === 1 && o.hp <= hpMax / 2) {
+                    o.boss8Phase = 3;
+                    o.phaseTransitionTime = now;
+                }
+                if (o.boss8Phase === 3) {
+                    if (now - o.phaseTransitionTime >= 1000) {
+                        o.boss8Phase = 2;
+                        o.stayStartTime = now;
+                        o.isMoving = false;
+                        o.moveCount = 0;
+                    }
+                    continue;
+                }
+                if (!o.isMoving) {
+                    if (now - o.stayStartTime >= 5000) {
+                        let moveDistance = 50 + Math.random() * 50;
+                        let direction = Math.random() < 0.5 ? -1 : 1;
+                        let newX = o.rect.x + direction * moveDistance;
+                        newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                        o.targetX = newX;
+                        o.startX = o.rect.x;
+                        o.isMoving = true;
+                        o.moveStartTime = now;
+                        o.moveCount++;
+                        o.spikeDirUp = !o.spikeDirUp;
+                    }
+                } else {
+                    let elapsed = now - o.moveStartTime;
+                    if (elapsed >= 500) {
+                        o.rect.x = o.targetX;
+                        o.isMoving = false;
+                        o.stayStartTime = now;
+                    } else {
+                        let progress = elapsed / 500;
+                        o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                    }
+                }
+                // 攻击（静止时）
+                if (!o.isMoving) {
+                    let bx = o.rect.x + o.rect.width / 2;
+                    let by = o.rect.y + o.rect.height / 2;
+
+                    // 初始化激光旋转角度（随机初始位置，但不能在玩家方向30度范围内）
+                    if (o.laserRotationTarget === undefined) {
+                        let playerAngle = Math.atan2(player.y - by, player.centerx() - bx);
+                        let validAngle = false;
+                        let attempts = 0;
+                        while (!validAngle && attempts < 100) {
+                            o.laserRotation = Math.random() * Math.PI * 2;
+                            validAngle = true;
+                            for (let i = 0; i < 4; i++) {
+                                let laserAngle = o.laserRotation + (i * Math.PI / 2);
+                                let angleDiff = Math.abs(laserAngle - playerAngle);
+                                angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+                                if (angleDiff < 30 * Math.PI / 180) {
+                                    validAngle = false;
+                                    break;
+                                }
+                            }
+                            attempts++;
+                        }
+                        // 如果100次都没找到，就设置在飞机向左40度的位置
+                        if (!validAngle) {
+                            o.laserRotation = playerAngle - 40 * Math.PI / 180;
+                        }
+                        o.laserRotationTarget = o.laserRotation + (o.boss8Phase === 1 ? 10 : 45) * Math.PI / 180;
+                        o.laserRotationCycleStart = now;
+                        o.rotationDone = false;
+                    }
+
+                    // 激光旋转逻辑：呆1秒，旋转1秒到新位置
+                    let cycleTime = now - o.laserRotationCycleStart;
+                    let rotationStep = o.boss8Phase === 1 ? 10 : 45;
+
+                    if (o.rotationDone) {
+                        // 旋转完成后，停留1秒
+                        if (cycleTime >= 1000) {
+                            o.rotationDone = false;
+                            o.laserRotation = o.laserRotationTarget;
+                            o.laserRotationTarget = o.laserRotation + rotationStep * Math.PI / 180;
+                            o.laserRotationCycleStart = now;
+                        }
+                    } else {
+                        // 旋转阶段，1秒内旋转到目标角度
+                        if (cycleTime >= 1000) {
+                            o.laserRotation = o.laserRotationTarget;
+                            o.rotationDone = true;
+                            o.laserRotationCycleStart = now;
+                        } else {
+                            let progress = cycleTime / 1000;
+                            o.laserRotation = o.laserRotation + (o.laserRotationTarget - o.laserRotation) * progress;
+                        }
+                    }
+
+                    // 激光碰撞检测（Boss移动时不触发）
+                    if (!o.isMoving && !invincible) {
+                        let px = player.centerx();
+                        let py = player.centery();
+                        let playerRadius = player.width / 4;
+                        let collisionWidth = 30;
+                        for (let i = 0; i < 4; i++) {
+                            let angle = o.laserRotation + (i * Math.PI / 2);
+                            let cosA = Math.cos(angle);
+                            let sinA = Math.sin(angle);
+                            let dist = Math.abs(sinA * (px - bx) - cosA * (py - by));
+                            if (dist < playerRadius + collisionWidth / 2) {
+                                window.boss3PlayerHP--;
+                                player.y = o.rect.y + o.rect.height + 10;
+                                if (window.boss3PlayerHP <= 0) {
+                                    boss3Running = false;
+                                    boss8Phase = "defeated";
+                                    document.getElementById("boss3GameOver").classList.remove("hidden");
+                                    return;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    // 尖刺子弹（有限距离激光）
+                    if (now - o.lastSpikeTime >= 1000) {
+                        let spikeDirs = [];
+                        if (o.spikeDirUp) {
+                            for (let angle = 20; angle <= 160; angle += 20) {
+                                let rad = angle * Math.PI / 180;
+                                spikeDirs.push({ vx: Math.cos(rad), vy: -Math.sin(rad) });
+                            }
+                            for (let angle = -30; angle >= -150; angle -= 30) {
+                                let rad = angle * Math.PI / 180;
+                                spikeDirs.push({ vx: Math.cos(rad), vy: Math.abs(Math.sin(rad)) });
+                            }
+                        } else {
+                            for (let angle = -30; angle >= -150; angle -= 30) {
+                                let rad = angle * Math.PI / 180;
+                                spikeDirs.push({ vx: Math.cos(rad), vy: Math.abs(Math.sin(rad)) });
+                            }
+                            for (let angle = 20; angle <= 160; angle += 20) {
+                                let rad = angle * Math.PI / 180;
+                                spikeDirs.push({ vx: Math.cos(rad), vy: -Math.sin(rad) });
+                            }
+                        }
+                        for (let d of spikeDirs) {
+                            let spikeSpeed = o.boss8Phase === 1 ? 10 : 12;
+                            bossBullets.push({
+                                x: bx, y: by,
+                                vx: d.vx * spikeSpeed, vy: d.vy * spikeSpeed,
+                                radius: player.width / 12,
+                                isSpike: true,
+                                spikeAngle: Math.atan2(d.vy, d.vx),
+                                spikeLength: 100
+                            });
+                        }
+                        o.lastSpikeTime = now;
+                    }
+
+                    // 追踪弹
+                    if (o.boss8Phase === 1 && now - o.lastTrackTime >= 1000) {
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            bossBullets.push({ x: bx, y: by, radius: player.width / 12, vx: (dx / dist) * 0.5, vy: (dy / dist) * 0.5 });
+                        }
+                        o.lastTrackTime = now;
+                    } else if (o.boss8Phase === 2 && now - o.lastTrackTime >= 500) {
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            for (let i = -1; i <= 1; i++) {
+                                let perpX = -dy / dist * i * 15;
+                                let perpY = dx / dist * i * 15;
+                                bossBullets.push({ x: bx + perpX, y: by + perpY, radius: player.width / 12, vx: (dx / dist) * 0.8, vy: (dy / dist) * 0.8 });
+                            }
+                        }
+                        o.lastTrackTime = now;
+                    }
+                }
+            }
+        }
+
+        // 更新子弹
+        for (let b of bossBullets) {
+            if (b.vx !== undefined && b.vy !== undefined) {
+                b.x += b.vx;
+                b.y += b.vy;
+            } else {
+                b.y += b.speed;
+            }
+        }
+        bossBullets = bossBullets.filter(b => b.y < HEIGHT && b.y > -50 && b.x > -50 && b.x < WIDTH + 50);
+
+        // Boss3模式子弹碰撞检测
+        for (let i = bossBullets.length - 1; i >= 0; i--) {
+            let b = bossBullets[i];
+            let dx = b.x - player.centerx();
+            let dy = b.y - player.centery();
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let collisionThreshold = b.radius + player.width / 4;
+            if (dist < collisionThreshold) {
+                console.log("Boss8子弹碰撞! dist:" + dist.toFixed(1) + " threshold:" + collisionThreshold.toFixed(1) + " shield:" + shield_hits + " HP:" + window.boss3PlayerHP);
+                if (shield_hits > 0) {
+                    shield_hits--;
+                    bossBullets.splice(i, 1);
+                } else {
+                    window.boss3PlayerHP--;
+                    bossBullets.splice(i, 1);
+                    console.log("扣血后HP:" + window.boss3PlayerHP);
+                    if (window.boss3PlayerHP <= 0) {
+                        boss3Running = false;
+                        document.getElementById("boss3GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+            }
+        }
+        lasers();
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+        particles.forEach(p => p.draw());
+
+        // 检查碰撞 - 玩家与Boss8的身体碰撞
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let o = obstacles[i];
+            if (o.type === "boss8" && boss8Phase === "active" && o.rect.y >= 0) {
+                let dx = player.centerx() - (o.rect.x + o.rect.width / 2);
+                let dy = player.centery() - (o.rect.y + o.rect.height / 2);
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.width / 2 + o.rect.width / 2) {
+                    window.boss3PlayerHP--;
+                    player.y = o.rect.y + o.rect.height + 10;
+                    if (window.boss3PlayerHP <= 0) {
+                        boss3Running = false;
+                        boss8Phase = "defeated";
+                        document.getElementById("boss3GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+                if (o.hp <= 0) {
+                    boss3Running = false;
+                    boss8Phase = "defeated";
+                    document.getElementById("boss3GameOver").classList.remove("hidden");
+                    return;
+                }
+            }
+        }
+
+        drawObstacles();
+        if (!invincible || Math.floor(Date.now() / 100) % 2 === 0) {
+            ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+        }
+
+        // 绘制Boss8紫色激光（在玩家飞机之上，Boss移动时不发射）
+        let boss8Obj = obstacles.find(o => o.type === "boss8");
+        if (boss8Obj && boss8Obj.laserRotationTarget !== undefined && !boss8Obj.isMoving) {
+            let bx = boss8Obj.rect.x + boss8Obj.rect.width / 2;
+            let by = boss8Obj.rect.y + boss8Obj.rect.height / 2;
+            let laserLength = 1000;
+            let pulsePhase = now / 100;
+            for (let i = 0; i < 4; i++) {
+                let angle = boss8Obj.laserRotation + (i * Math.PI / 2);
+                let cosA = Math.cos(angle);
+                let sinA = Math.sin(angle);
+                let endX = bx + cosA * laserLength;
+                let endY = by + sinA * laserLength;
+
+                // 外层发光
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(200, 100, 255, ${0.15 + 0.1 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss8Obj.boss8Phase === 1 ? 30 + 5 * Math.sin(pulsePhase + i) : 32 + 5 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+
+                // 中层
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(180, 120, 255, ${0.3 + 0.15 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss8Obj.boss8Phase === 1 ? 20 + 3 * Math.sin(pulsePhase + i) : 22 + 3 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+
+                // 核心
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(220, 180, 255, ${0.6 + 0.2 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss8Obj.boss8Phase === 1 ? 8 + 2 * Math.sin(pulsePhase + i) : 10 + 2 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+            }
+        }
+
+        for (let b of bossBullets) {
+            if (b.isSpike) {
+                let angle = b.spikeAngle;
+                let len = b.spikeLength;
+                let w = 10;
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+                ctx.beginPath();
+                ctx.moveTo(len / 2, 0);
+                ctx.lineTo(-len / 2, -w / 2);
+                ctx.lineTo(-len / 2, w / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            } else {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+                ctx.fill();
+            }
+        }
+        if (boss8Phase === "warning") {
+            ctx.fillStyle = "rgb(255,0,0)";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+            ctx.textAlign = "left";
+        }
+
+        boss3AnimationId = requestAnimationFrame(boss3Loop);
+    }
+
+    boss3Loop();
+}
+
 document.getElementById("boss2RestartBtn").addEventListener("click", () => {
+    document.getElementById("bossGameOver").classList.add("hidden");
     document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     startBoss2Game();
 });
 
 document.getElementById("boss2BackBtn").addEventListener("click", () => {
     boss2Running = false;
     if (boss2AnimationId) cancelAnimationFrame(boss2AnimationId);
+    document.getElementById("bossGameOver").classList.add("hidden");
     document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
+    document.getElementById("bossSelectScreen").classList.remove("hidden");
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+});
+
+document.getElementById("boss3RestartBtn").addEventListener("click", () => {
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
+    startBoss3Game();
+});
+
+document.getElementById("boss3BackBtn").addEventListener("click", () => {
+    boss3Running = false;
+    if (boss3AnimationId) cancelAnimationFrame(boss3AnimationId);
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
+    document.getElementById("bossSelectScreen").classList.remove("hidden");
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+});
+
+function startBoss4Game() {
+    running = false;
+    obstacles = [];
+    bossBullets = [];
+    particles = [];
+    score = 0;
+    document.getElementById("boss4GameOver").classList.add("hidden");
+    shield_hits = 0;
+    invincible = false;
+    invincibleEndTime = 0;
+    player.x = WIDTH / 2;
+    player.y = HEIGHT - 100;
+    boss9Phase = "none";
+    boss9Triggered = false;
+    boss9StartTime = Date.now();
+    boss4Running = true;
+    window.boss4PlayerHP = 1;
+    window.lastBoss4LogTime = 0;
+
+    function boss4Loop() {
+        if (!boss4Running) return;
+
+        let now = Date.now();
+        let dt = 1 / 60;
+
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        updatePlayer();
+
+        if (invincible && Date.now() > invincibleEndTime) {
+            invincible = false;
+        }
+
+        if (!window.lastBoss4LogTime || now - window.lastBoss4LogTime > 2000) {
+            let boss9 = obstacles.find(o => o.type === "boss9");
+            console.log("Boss9状态 - phase:" + boss9Phase + " HP:" + (boss9?.hp || "N/A") + " playerHP:" + window.boss4PlayerHP + " bulletCount:" + bossBullets.length + " shield:" + shield_hits);
+            window.lastBoss4LogTime = now;
+        }
+
+        if (boss9Phase === "none" && now - boss9StartTime >= 2000) {
+            boss9Triggered = true;
+            boss9Phase = "warning";
+            boss9StartTime = now;
+        }
+
+        if (boss9Phase === "warning") {
+            if (now - boss9StartTime >= 1000) {
+                boss9Phase = "waiting_after_warning";
+                boss9StartTime = now;
+            }
+        } else if (boss9Phase === "waiting_after_warning") {
+            if (now - boss9StartTime >= 1000) {
+                boss9Phase = "appearing";
+                boss9StartTime = now;
+                let rect = { x: (WIDTH - 294) / 2, y: -294, width: 294, height: 294 };
+                obstacles.push({ rect, hp: 12000, type: "boss9", lastAttackTime: 0 });
+            }
+        } else if (boss9Phase === "appearing") {
+            let boss9 = obstacles.find(o => o.type === "boss9");
+            if (boss9 && boss9.rect.y < 253) {
+                boss9.rect.y += 4;
+            } else if (boss9) {
+                boss9.rect.y = 253;
+                boss9Phase = "active";
+            }
+        }
+
+        for (let o of obstacles) {
+            if (o.type === "boss9" && boss9Phase === "active" && o.rect.y >= 0) {
+                if (o.isMoving === undefined) {
+                    o.isMoving = false;
+                    o.stayStartTime = now;
+                    o.moveStartTime = 0;
+                    o.targetX = o.rect.x;
+                    o.startX = o.rect.x;
+                    o.boss9Phase = 1;
+                    o.phaseTransitionTime = 0;
+                    o.lastSpikeTime = 0;
+                    o.lastTrackTime = 0;
+                    o.spiralAngle = 0;
+                    o.moveCount = 0;
+                }
+                let hpMax = 12000;
+                if (o.boss9Phase === 1 && o.hp <= hpMax / 2) {
+                    o.boss9Phase = 3;
+                    o.phaseTransitionTime = now;
+                }
+                if (o.boss9Phase === 3) {
+                    if (now - o.phaseTransitionTime >= 1000) {
+                        o.boss9Phase = 2;
+                        o.stayStartTime = now;
+                        o.isMoving = false;
+                        o.moveCount = 0;
+                    }
+                    continue;
+                }
+                if (!o.isMoving) {
+                    if (now - o.stayStartTime >= 5000) {
+                        let moveDistance = 50 + Math.random() * 50;
+                        let direction = Math.random() < 0.5 ? -1 : 1;
+                        let newX = o.rect.x + direction * moveDistance;
+                        newX = Math.max(0, Math.min(WIDTH - o.rect.width, newX));
+                        o.targetX = newX;
+                        o.startX = o.rect.x;
+                        o.isMoving = true;
+                        o.moveStartTime = now;
+                        o.moveCount++;
+                        o.spikeDirUp = !o.spikeDirUp;
+                    }
+                } else {
+                    let elapsed = now - o.moveStartTime;
+                    if (elapsed >= 500) {
+                        o.rect.x = o.targetX;
+                        o.isMoving = false;
+                        o.stayStartTime = now;
+                    } else {
+                        let progress = elapsed / 500;
+                        o.rect.x = o.startX + (o.targetX - o.startX) * progress;
+                    }
+                }
+                if (!o.isMoving) {
+                    let bx = o.rect.x + o.rect.width / 2;
+                    let by = o.rect.y + o.rect.height / 2;
+
+                    if (o.laserRotationTarget === undefined) {
+                        let playerAngle = Math.atan2(player.y - by, player.centerx() - bx);
+                        let validAngle = false;
+                        let attempts = 0;
+                        while (!validAngle && attempts < 100) {
+                            o.laserRotation = Math.random() * Math.PI * 2;
+                            validAngle = true;
+                            for (let i = 0; i < 4; i++) {
+                                let laserAngle = o.laserRotation + (i * Math.PI / 2);
+                                let angleDiff = Math.abs(laserAngle - playerAngle);
+                                angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+                                if (angleDiff < 30 * Math.PI / 180) {
+                                    validAngle = false;
+                                    break;
+                                }
+                            }
+                            attempts++;
+                        }
+                        if (!validAngle) {
+                            o.laserRotation = playerAngle - 40 * Math.PI / 180;
+                        }
+                        o.laserRotationTarget = o.laserRotation + (o.boss9Phase === 1 ? 10 : 45) * Math.PI / 180;
+                        o.laserRotationCycleStart = now;
+                        o.rotationDone = false;
+                    }
+
+                    let cycleTime = now - o.laserRotationCycleStart;
+                    let rotationStep = o.boss9Phase === 1 ? 10 : 45;
+
+                    if (o.rotationDone) {
+                        if (cycleTime >= 1000) {
+                            o.rotationDone = false;
+                            o.laserRotation = o.laserRotationTarget;
+                            o.laserRotationTarget = o.laserRotation + rotationStep * Math.PI / 180;
+                            o.laserRotationCycleStart = now;
+                        }
+                    } else {
+                        if (cycleTime >= 1000) {
+                            o.laserRotation = o.laserRotationTarget;
+                            o.rotationDone = true;
+                            o.laserRotationCycleStart = now;
+                        } else {
+                            let progress = cycleTime / 1000;
+                            o.laserRotation = o.laserRotation + (o.laserRotationTarget - o.laserRotation) * progress;
+                        }
+                    }
+
+                    if (!o.isMoving && !invincible) {
+                        let px = player.centerx();
+                        let py = player.centery();
+                        let playerRadius = player.width / 4;
+                        let collisionWidth = 30;
+                        for (let i = 0; i < 4; i++) {
+                            let angle = o.laserRotation + (i * Math.PI / 2);
+                            let cosA = Math.cos(angle);
+                            let sinA = Math.sin(angle);
+                            let dist = Math.abs(sinA * (px - bx) - cosA * (py - by));
+                            if (dist < playerRadius + collisionWidth / 2) {
+                                window.boss4PlayerHP--;
+                                player.y = o.rect.y + o.rect.height + 10;
+                                if (window.boss4PlayerHP <= 0) {
+                                    boss4Running = false;
+                                    boss9Phase = "defeated";
+                                    document.getElementById("boss4GameOver").classList.remove("hidden");
+                                    return;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    if (now - o.lastSpikeTime >= 1000) {
+                        let bulletCount = o.boss9Phase === 1 ? 12 : 20;
+                        let spiralStep = o.boss9Phase === 1 ? 15 : 30;
+                        let spikeSpeed = o.boss9Phase === 1 ? 2 : 3;
+                        for (let i = 0; i < bulletCount; i++) {
+                            let angle = (o.spiralAngle + i * spiralStep) * Math.PI / 180;
+                            bossBullets.push({
+                                x: bx, y: by,
+                                vx: Math.cos(angle) * spikeSpeed,
+                                vy: Math.sin(angle) * spikeSpeed,
+                                radius: player.width / 12
+                            });
+                        }
+                        o.spiralAngle = (o.spiralAngle + spiralStep) % 360;
+                        o.lastSpikeTime = now;
+                    }
+
+                    if (o.boss9Phase === 1 && now - o.lastTrackTime >= 1000) {
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            bossBullets.push({ x: bx, y: by, radius: player.width / 12, vx: (dx / dist) * 0.5, vy: (dy / dist) * 0.5 });
+                        }
+                        o.lastTrackTime = now;
+                    } else if (o.boss9Phase === 2 && now - o.lastTrackTime >= 500) {
+                        let dx = player.centerx() - bx;
+                        let dy = player.centery() - by;
+                        let dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            for (let i = -1; i <= 1; i++) {
+                                let perpX = -dy / dist * i * 15;
+                                let perpY = dx / dist * i * 15;
+                                bossBullets.push({ x: bx + perpX, y: by + perpY, radius: player.width / 12, vx: (dx / dist) * 0.8, vy: (dy / dist) * 0.8 });
+                            }
+                        }
+                        o.lastTrackTime = now;
+                    }
+                }
+            }
+        }
+
+        for (let b of bossBullets) {
+            if (b.vx !== undefined && b.vy !== undefined) {
+                b.x += b.vx;
+                b.y += b.vy;
+            } else {
+                b.y += b.speed;
+            }
+        }
+        bossBullets = bossBullets.filter(b => b.y < HEIGHT && b.y > -50 && b.x > -50 && b.x < WIDTH + 50);
+
+        for (let i = bossBullets.length - 1; i >= 0; i--) {
+            let b = bossBullets[i];
+            let dx = b.x - player.centerx();
+            let dy = b.y - player.centery();
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let collisionThreshold = b.radius + player.width / 4;
+            if (dist < collisionThreshold) {
+                if (shield_hits > 0) {
+                    shield_hits--;
+                    bossBullets.splice(i, 1);
+                } else {
+                    window.boss4PlayerHP--;
+                    bossBullets.splice(i, 1);
+                    if (window.boss4PlayerHP <= 0) {
+                        boss4Running = false;
+                        document.getElementById("boss4GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+            }
+        }
+        lasers();
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+        particles.forEach(p => p.draw());
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let o = obstacles[i];
+            if (o.type === "boss9" && boss9Phase === "active" && o.rect.y >= 0) {
+                let dx = player.centerx() - (o.rect.x + o.rect.width / 2);
+                let dy = player.centery() - (o.rect.y + o.rect.height / 2);
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.width / 2 + o.rect.width / 2) {
+                    window.boss4PlayerHP--;
+                    player.y = o.rect.y + o.rect.height + 10;
+                    if (window.boss4PlayerHP <= 0) {
+                        boss4Running = false;
+                        boss9Phase = "defeated";
+                        document.getElementById("boss4GameOver").classList.remove("hidden");
+                        return;
+                    }
+                }
+                if (o.hp <= 0) {
+                    boss4Running = false;
+                    boss9Phase = "defeated";
+                    document.getElementById("boss4GameOver").classList.remove("hidden");
+                    return;
+                }
+            }
+        }
+
+        drawObstacles();
+        if (!invincible || Math.floor(Date.now() / 100) % 2 === 0) {
+            ctx.drawImage(planeImg, player.x, player.y, player.width, player.height);
+        }
+
+        let boss9Obj = obstacles.find(o => o.type === "boss9");
+        if (boss9Obj && boss9Obj.laserRotationTarget !== undefined && !boss9Obj.isMoving) {
+            let bx = boss9Obj.rect.x + boss9Obj.rect.width / 2;
+            let by = boss9Obj.rect.y + boss9Obj.rect.height / 2;
+            let laserLength = 1000;
+            let pulsePhase = now / 100;
+            for (let i = 0; i < 4; i++) {
+                let angle = boss9Obj.laserRotation + (i * Math.PI / 2);
+                let cosA = Math.cos(angle);
+                let sinA = Math.sin(angle);
+                let endX = bx + cosA * laserLength;
+                let endY = by + sinA * laserLength;
+
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(200, 100, 255, ${0.15 + 0.1 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss9Obj.boss9Phase === 1 ? 30 + 5 * Math.sin(pulsePhase + i) : 32 + 5 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(180, 120, 255, ${0.3 + 0.15 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss9Obj.boss9Phase === 1 ? 20 + 3 * Math.sin(pulsePhase + i) : 22 + 3 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = `rgba(220, 180, 255, ${0.6 + 0.2 * Math.sin(pulsePhase + i)})`;
+                ctx.lineWidth = boss9Obj.boss9Phase === 1 ? 8 + 2 * Math.sin(pulsePhase + i) : 10 + 2 * Math.sin(pulsePhase + i);
+                ctx.stroke();
+            }
+        }
+
+        for (let b of bossBullets) {
+            if (b.isSpike) {
+                let angle = b.spikeAngle;
+                let len = b.spikeLength;
+                let w = 10;
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+                ctx.beginPath();
+                ctx.moveTo(len / 2, 0);
+                ctx.lineTo(-len / 2, -w / 2);
+                ctx.lineTo(-len / 2, w / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            } else {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 80, 80, 0.9)";
+                ctx.fill();
+            }
+        }
+        if (boss9Phase === "warning") {
+            ctx.fillStyle = "rgb(255,0,0)";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("终极boss来袭", WIDTH / 2, HEIGHT / 2);
+            ctx.textAlign = "left";
+        }
+
+        boss4AnimationId = requestAnimationFrame(boss4Loop);
+    }
+
+    boss4Loop();
+}
+
+document.getElementById("boss4RestartBtn").addEventListener("click", () => {
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
+    startBoss4Game();
+});
+
+document.getElementById("boss4BackBtn").addEventListener("click", () => {
+    boss4Running = false;
+    if (boss4AnimationId) cancelAnimationFrame(boss4AnimationId);
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     document.getElementById("bossSelectScreen").classList.remove("hidden");
     ctx.fillStyle = "rgb(0, 0, 0)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
