@@ -344,7 +344,8 @@ body {
 
 #boss1RestartBtn,
 #boss2RestartBtn,
-#boss3RestartBtn {
+#boss3RestartBtn,
+#boss4RestartBtn {
     background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
     color: #fff;
     border: none;
@@ -359,7 +360,8 @@ body {
 
 #boss1RestartBtn:hover,
 #boss2RestartBtn:hover,
-#boss3RestartBtn:hover {
+#boss3RestartBtn:hover,
+#boss4RestartBtn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
@@ -394,6 +396,8 @@ body {
         width: 100vw;
         height: 100vh;
         display: block;
+        border: none;
+        border-radius: 0;
     }
 
     #startScreen {
@@ -401,7 +405,119 @@ body {
         height: 100vh;
     }
 
+    #startIcon {
+        width: 120px;
+        height: 120px;
+    }
+
+    #startBtn {
+        padding: 16px 50px;
+        font-size: 20px;
+    }
+
+    #controlScreen,
+    #modeScreen,
+    #bossSelectScreen {
+        width: 100vw;
+        height: 100vh;
+        padding: 20px;
+    }
+
+    #controlScreen h2,
+    #modeScreen h2,
+    #bossSelectScreen h2 {
+        font-size: 24px;
+        margin-bottom: 30px;
+    }
+
+    #controlOptions,
+    #modeOptions {
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .controlOption {
+        padding: 15px;
+    }
+
+    .controlOption img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .controlOption span {
+        font-size: 16px;
+    }
+
+    #bossOptions {
+        flex-direction: column;
+        gap: 30px;
+        align-items: center;
+    }
+
+    .bossOption img {
+        width: 100px;
+        height: 100px;
+    }
+
+    .bossBtn {
+        padding: 10px 25px;
+        font-size: 14px;
+    }
+
+    .backBtn {
+        padding: 12px 35px;
+        font-size: 14px;
+        margin-top: 30px;
+    }
+
     #ui {
+        width: 100vw;
+        height: 100vh;
+    }
+
+    #scoreDisplay {
+        font-size: 20px;
+        padding: 10px 15px;
+        top: 10px;
+        left: 10px;
+    }
+
+    .game-over-content {
+        padding: 30px 40px;
+        margin: 20px;
+    }
+
+    .game-over-content h2 {
+        font-size: 28px;
+    }
+
+    .final-score-p {
+        font-size: 24px;
+    }
+
+    .highest-score-p {
+        font-size: 18px;
+    }
+
+    #restartBtn,
+    .backToModeBtn,
+    #boss1RestartBtn,
+    #boss2RestartBtn,
+    #boss3RestartBtn,
+    #boss4RestartBtn {
+        padding: 14px 40px;
+        font-size: 16px;
+        display: block;
+        margin: 10px auto;
+    }
+
+    #bossGameOver,
+    #boss2GameOver,
+    #boss3GameOver,
+    #boss4GameOver,
+    #gameOver {
         width: 100vw;
         height: 100vh;
     }

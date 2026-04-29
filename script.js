@@ -9,48 +9,99 @@ canvas.height = HEIGHT;
 // ==================== 图片资源加载 ====================
 const planeImg = new Image();
 planeImg.src = "assets/Plane.jpg";
+planeImg._origSrc = "assets/Plane.jpg";
 
 const meteoriteImg = new Image();
 meteoriteImg.src = "assets/Meteorite.jpg";
+meteoriteImg._origSrc = "assets/Meteorite.jpg";
 
 const goldImg = new Image();
 goldImg.src = "assets/GMe.jpg";
+goldImg._origSrc = "assets/GMe.jpg";
 
 const redImg = new Image();
 redImg.src = "assets/RMe.jpg";
+redImg._origSrc = "assets/RMe.jpg";
 
 const arrowImg = new Image();
 arrowImg.src = "assets/Arrow.jpg";
+arrowImg._origSrc = "assets/Arrow.jpg";
 
 const shieldImg = new Image();
 shieldImg.src = "assets/Shield.jpg";
+shieldImg._origSrc = "assets/Shield.jpg";
 
 const bossImg = new Image();
 bossImg.src = "assets/1.1.png";
+bossImg._origSrc = "assets/1.1.png";
 
 const boss2Img = new Image();
 boss2Img.src = "assets/1.2.png";
+boss2Img._origSrc = "assets/1.2.png";
 
 const boss3Img = new Image();
 boss3Img.src = "assets/2.1.png";
+boss3Img._origSrc = "assets/2.1.png";
 
 const boss4Img = new Image();
 boss4Img.src = "assets/3.1.png";
+boss4Img._origSrc = "assets/3.1.png";
 
 const boss5Img = new Image();
 boss5Img.src = "assets/4.1.png";
+boss5Img._origSrc = "assets/4.1.png";
 
 const boss6Img = new Image();
 boss6Img.src = "assets/4.1.1.png";
+boss6Img._origSrc = "assets/4.1.1.png";
 
 const boss7Img = new Image();
 boss7Img.src = "assets/3.1.1.png";
+boss7Img._origSrc = "assets/3.1.1.png";
 
 const boss8Img = new Image();
 boss8Img.src = "assets/5.1.1.jpg";
+boss8Img._origSrc = "assets/5.1.1.jpg";
 
 const boss9Img = new Image();
 boss9Img.src = "assets/6.1.1.png";
+boss9Img._origSrc = "assets/6.1.1.png";
+
+// ==================== 手机端图片预加载 ====================
+const imageList = [
+    planeImg, meteoriteImg, goldImg, redImg, arrowImg, shieldImg,
+    bossImg, boss2Img, boss3Img, boss4Img, boss5Img, boss6Img, boss7Img, boss8Img, boss9Img
+];
+
+let mobilePreloadCallback = null;
+
+function preloadImagesForMobile(callback) {
+    mobilePreloadCallback = callback;
+    let loadedCount = 0;
+    const total = imageList.length;
+
+    imageList.forEach(img => {
+        const newImg = new Image();
+        newImg.onload = () => {
+            img.src = newImg.src;
+            loadedCount++;
+            if (loadedCount >= total && mobilePreloadCallback) {
+                mobilePreloadCallback();
+                mobilePreloadCallback = null;
+            }
+        };
+        newImg.onerror = () => {
+            console.error("图片加载失败: " + img._origSrc);
+            img.src = newImg.src;
+            loadedCount++;
+            if (loadedCount >= total && mobilePreloadCallback) {
+                mobilePreloadCallback();
+                mobilePreloadCallback = null;
+            }
+        };
+        newImg.src = img._origSrc + "?t=" + Date.now();
+    });
+}
 
 // ==================== 游戏状态 ====================
 let obstacles = [];
@@ -1506,12 +1557,15 @@ function isMobile() {
 document.getElementById("startBtn").addEventListener("click", () => {
     document.getElementById("startScreen").classList.add("hidden");
     if (isMobile()) {
-        // 移动端直接开始游戏
+        // 移动端预加载图片后开始游戏
         if (!gameStarted) {
-            gameStarted = true;
-            gameStartTime = Date.now();
-            if (animationId) cancelAnimationFrame(animationId);
-            animationId = requestAnimationFrame(gameLoop);
+            preloadImagesForMobile(() => {
+                gameStarted = true;
+                gameStartTime = Date.now();
+                running = true;
+                if (animationId) cancelAnimationFrame(animationId);
+                animationId = requestAnimationFrame(gameLoop);
+            });
         }
     } else {
         // PC端显示控制选择界面
@@ -1634,6 +1688,12 @@ let boss1AnimationId = null;
 function startBoss1Game() {
     console.log("startBoss1Game 被调用!");
     running = false; // 停止无尽模式
+    // 隐藏所有游戏结束弹窗
+    document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     // 重置状态
     obstacles = [];
     bossBullets = [];
@@ -1943,6 +2003,12 @@ let boss2AnimationId = null;
 
 function startBoss2Game() {
     running = false;
+    // 隐藏所有游戏结束弹窗
+    document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     // 重置状态
     obstacles = [];
     bossBullets = [];
@@ -2248,6 +2314,12 @@ let boss4AnimationId = null;
 
 function startBoss3Game() {
     running = false;
+    // 隐藏所有游戏结束弹窗
+    document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     // 重置状态
     obstacles = [];
     bossBullets = [];
@@ -2708,11 +2780,16 @@ document.getElementById("boss3BackBtn").addEventListener("click", () => {
 
 function startBoss4Game() {
     running = false;
+    // 隐藏所有游戏结束弹窗
+    document.getElementById("gameOver").classList.add("hidden");
+    document.getElementById("bossGameOver").classList.add("hidden");
+    document.getElementById("boss2GameOver").classList.add("hidden");
+    document.getElementById("boss3GameOver").classList.add("hidden");
+    document.getElementById("boss4GameOver").classList.add("hidden");
     obstacles = [];
     bossBullets = [];
     particles = [];
     score = 0;
-    document.getElementById("boss4GameOver").classList.add("hidden");
     shield_hits = 0;
     invincible = false;
     invincibleEndTime = 0;
