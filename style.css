@@ -250,6 +250,11 @@ body {
     border-radius: 4px;
 }
 
+#mobileLoadingScreen {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 #ui {
     position: fixed;
     top: 0;
@@ -405,7 +410,7 @@ body {
         height: 100vh;
     }
 
-    #startIcon {
+    #gameIcon {
         width: 120px;
         height: 120px;
     }
@@ -520,5 +525,65 @@ body {
     #gameOver {
         width: 100vw;
         height: 100vh;
+    }
+
+    #mobileLoadingScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 350;
+    }
+
+    #mobileLoadingScreen.hidden {
+        display: none;
+    }
+
+    .mobile-loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #mobileLoadingIcon {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 30px;
+        border-radius: 15px;
+        animation: mobilePulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes mobilePulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.85; }
+    }
+
+    #mobileLoadingText {
+        color: #fff;
+        font-size: 18px;
+        margin-bottom: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    #mobileLoadingBar {
+        width: 280px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    #mobileLoadingProgress {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.2s ease;
     }
 }

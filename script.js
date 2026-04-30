@@ -79,12 +79,17 @@ function preloadImagesForMobile(callback) {
     mobilePreloadCallback = callback;
     let loadedCount = 0;
     const total = imageList.length;
+    const loadingText = document.getElementById("mobileLoadingText");
+    const loadingProgress = document.getElementById("mobileLoadingProgress");
 
     imageList.forEach(img => {
         const newImg = new Image();
         newImg.onload = () => {
             img.src = newImg.src;
             loadedCount++;
+            const percent = Math.round((loadedCount / total) * 100);
+            loadingText.textContent = "加载中... " + percent + "%";
+            loadingProgress.style.width = percent + "%";
             if (loadedCount >= total && mobilePreloadCallback) {
                 mobilePreloadCallback();
                 mobilePreloadCallback = null;
@@ -94,6 +99,9 @@ function preloadImagesForMobile(callback) {
             console.error("图片加载失败: " + img._origSrc);
             img.src = newImg.src;
             loadedCount++;
+            const percent = Math.round((loadedCount / total) * 100);
+            loadingText.textContent = "加载中... " + percent + "%";
+            loadingProgress.style.width = percent + "%";
             if (loadedCount >= total && mobilePreloadCallback) {
                 mobilePreloadCallback();
                 mobilePreloadCallback = null;
@@ -1549,22 +1557,26 @@ let mouseY = HEIGHT / 2;
 
 // 判断是否为移动端
 function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-        || window.innerWidth < 768;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 // ==================== 开始按钮 ====================
 document.getElementById("startBtn").addEventListener("click", () => {
     document.getElementById("startScreen").classList.add("hidden");
     if (isMobile()) {
-        // 移动端预加载图片后开始游戏
+        // 移动端显示加载界面并预加载图片
         if (!gameStarted) {
+            const loadingText = document.getElementById("mobileLoadingText");
+            const loadingProgress = document.getElementById("mobileLoadingProgress");
+            const loadingScreen = document.getElementById("mobileLoadingScreen");
+            if (loadingText) loadingText.textContent = "加载中... 0%";
+            if (loadingProgress) loadingProgress.style.width = "0%";
+            if (loadingScreen) loadingScreen.classList.remove("hidden");
             preloadImagesForMobile(() => {
-                gameStarted = true;
-                gameStartTime = Date.now();
-                running = true;
-                if (animationId) cancelAnimationFrame(animationId);
-                animationId = requestAnimationFrame(gameLoop);
+                const ls = document.getElementById("mobileLoadingScreen");
+                const cs = document.getElementById("controlScreen");
+                if (ls) ls.classList.add("hidden");
+                if (cs) cs.classList.remove("hidden");
             });
         }
     } else {
